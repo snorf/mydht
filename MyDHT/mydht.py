@@ -29,7 +29,7 @@ class MyDHT(CmdApp):
     def serverthread(self,clientsock):
         """ Thread that handles a client
             `clientsock` is the socket where the client is connected
-            perform the operation and connect to another server if neccessary
+            perform the operation and connect to another server if necessary
         """
         sockfile = clientsock.makefile('r') # wrap socket in dup file obj
         command = sockfile.readline()[:-1]
