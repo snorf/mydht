@@ -4,7 +4,7 @@ from cmdapp import CmdApp
 
 class MyDHT(CmdApp):
     def __init__(self):
-        """
+        """ Main class for the DHT server
         """
         CmdApp.__init__(self)
         self.port = int(self.getarg("port",50140))
@@ -27,6 +27,10 @@ class MyDHT(CmdApp):
         del self.map[key]
 
     def serverthread(self,clientsock):
+        """ Thread that handles a client
+            `clientsock` is the socket where the client is connected
+            perform the operation and connect to another server if neccessary
+        """
         sockfile = clientsock.makefile('r') # wrap socket in dup file obj
         command = sockfile.readline()[:-1]
         key = sockfile.readline()[:-1]
@@ -45,6 +49,9 @@ class MyDHT(CmdApp):
         self.debug("connection closed")
 
     def server(self):
+        """ Main server process
+            Starts a new thread for new clients
+        """
         self.debug("Starting server at",self.host,self.port)
         serversock = socket(AF_INET,SOCK_STREAM)
         serversock.bind((self.host,self.port))
