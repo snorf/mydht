@@ -1,5 +1,16 @@
 import md5
 
+class Server():
+    def __init__(self,host,port):
+        self.host = host
+        self.port = int(port)
+
+    def __str__(self):
+        return self.host + ":" + str(self.port)
+
+    def bindaddress(self):
+        return self.host,self.port
+
 class HashRing(object):
 
     def __init__(self, nodes=None, replicas=3):

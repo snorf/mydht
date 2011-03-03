@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from HashRing import HashRing
 
 class CmdApp:
     """Base class for command line application.

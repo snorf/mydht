@@ -37,7 +37,8 @@ class Client(CmdApp):
         self.sock.send(self.key + "\n")
 
         if self.operator == "put":
-            self.sock.send(self.value + "\n")
+            self.sock.send(self.value)
+        self.sock.send("\n")
 
         while(1):
             data = self.sock.recv(_block)
