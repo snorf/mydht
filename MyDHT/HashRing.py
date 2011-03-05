@@ -13,7 +13,7 @@ class Server():
 
 class HashRing(object):
 
-    def __init__(self, nodes=None, replicas=3):
+    def __init__(self, nodes=None, replicas=1):
         """Manages a hash ring.
 
         `nodes` is a list of objects that have a proper __str__ representation.
@@ -89,6 +89,20 @@ class HashRing(object):
         while True:
             for key in self._sorted_keys:
                 yield self.ring[key]
+
+    def get_nodelist(self, string_key):
+        """ Given a string key returns the nodes as a generator (but not neverending).
+        """
+        if not self.ring:
+            return None
+
+        node, pos = self.get_node_pos(string_key)
+        nodelist = []
+        for key in self._sorted_keys[pos:]:
+            nodelist.append(self.ring[key])
+
+        return set(nodelist)
+
 
     def gen_key(self, key):
         """Given a string key it returns a long value,

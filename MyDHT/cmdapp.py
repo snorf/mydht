@@ -14,6 +14,14 @@ class CmdApp:
         self.args = sys.argv[1:]
         self.env = os.environ
         self.verbose = self.getopt('-v') or self.getenv('VERBOSE')
+        self.streams = sys.stdin, sys.stdout
+        logfile = self.getarg("-l") or self.getarg("--logfile")
+        if logfile:
+            sys.stdout = open(logfile,"w")
+        self.usage = "extended in subclass"
+
+    def __del__(self):
+        sys.stdin, sys.stdout = self.streams
 
     def getenv(self,name,default=None):
         """ Gets `name` from environment, if not found `default` is returned
@@ -44,8 +52,17 @@ class CmdApp:
             return val
         except Exception:
             return default
-        
+
+    def help(self):
+        print "Usage:",self.name,"[options]",self.usage,
+        print """  -v
+             verbose mode
+        """
+        sys.exit(1)
+
     def now(self): return time.ctime(time.time())
 
     def debug(self,*message):
-        if(self.verbose): print "["+self.now()+"]:",message
+        if(self.verbose):
+            print "["+self.now()+"]:",message
+            sys.stdout.flush()

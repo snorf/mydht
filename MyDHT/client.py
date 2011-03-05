@@ -1,5 +1,7 @@
 from _socket import *
 import sys
+from mydht import MyDHT
+from HashRing import Server
 from cmdapp import CmdApp
 
 __author__ = 'Johan'
@@ -10,14 +12,37 @@ class Client(CmdApp):
         """A MyDHT client for interacting with MyDHT servers
         """
         CmdApp.__init__(self)
-        self.port = int(self.getarg("port",50140))
-        self.host = self.getarg("hostname","localhost")
-        self.operator = self.getarg('-o') or self.getarg('-operator')
-        self.value = self.getarg("-v") or self.getarg("-value")
-        self.key = self.getarg("-k") or self.getarg("-key")
         self.sock = None
-        self.debug("command:",\
-        self.host,self.port,self.operator,self.key,self.value)
+        self.remoteserver = None
+        self.usage = \
+        """
+           -c, --command
+             put, get, del
+           -h, --hostname
+             specify hostname (default: localhost)
+        """
+
+    def cmdlinestart(self):
+        """ Parse command line parameters and start client
+        """
+        try:
+            port = int( self.getarg("-p") or self.getarg("--port",50140))
+            host = self.getarg("-h") or self.getarg("--hostname","localhost")
+            self.key = self.getarg("-k") or self.getarg("-key")
+            self.server = Server(host,port)
+            self.command = self.getarg('-c') or self.getarg('-command')
+            self.value = self.getarg("-val") or self.getarg("-value")
+            self.debug("command:",\
+            str(self.server),self.command,self.key,self.value)
+            if self.command is None or self.key is None or self.server is None:
+                self.help()
+        except TypeError:
+            self.help()
+        self.client()
+
+    def usage(self):
+        print "Usage: -o operator -k key -v value"
+        sys.exit(1)
 
     def put(self,file):
         """ Open self.file in binary mode and send it to socket
@@ -30,23 +55,10 @@ class Client(CmdApp):
                 assert sent == len(bytes)
         except Exception:
             print "Error uploading:",self.file
+            
     def client(self):
-        self.sock = socket(AF_INET, SOCK_STREAM)
-        self.sock.connect((self.host, self.port))
-        self.sock.send(self.operator + "\n")
-        self.sock.send(self.key + "\n")
-
-        if self.operator == "put":
-            self.sock.send(self.value)
-        self.sock.send("\n")
-
-        while(1):
-            data = self.sock.recv(_block)
-            if not data: break
-            self.debug("response from server",data)
-
-        self.sock.close()
-        self.debug("closed connection to server")
+        server, response = MyDHT().sendcommand(self.server,self.command,self.key,self.value)
+        print str(server),":",response
 
 if __name__ == "__main__":
-    Client().client()
+    Client().cmdlinestart()
