@@ -14,7 +14,10 @@ class MyDHTTable():
         return len(self.map)
 
     def __str__(self):
-         return "\n".join(map(lambda keyvalue: str(keyvalue[0]) + ":" + str(keyvalue[1]), self.map.viewitems()))
+        values = []
+        for key in self.map.keys():
+            values.append(key + ": " + self.map[key])
+        return "\n".join(values)
 
     def perform(self,command,key,value):
         """ Perform `command` with `key` and `value`

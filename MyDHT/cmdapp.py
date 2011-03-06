@@ -65,4 +65,3 @@ class CmdApp:
     def debug(self,*message):
         if(self.verbose):
             print "["+self.now()+"]:",message
-            sys.stdout.flush()

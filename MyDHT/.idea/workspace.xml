@@ -3,12 +3,9 @@
   <component name="ChangeListManager">
     <list default="true" id="e6a99f7c-8d86-49a3-927b-ae303682379e" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/HashRing.py" afterPath="$PROJECT_DIR$/HashRing.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/MyDHTTable.py" afterPath="$PROJECT_DIR$/MyDHTTable.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py" afterPath="$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/TestMyDHT.py" afterPath="$PROJECT_DIR$/TestMyDHT.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/mydhtclient.py" afterPath="$PROJECT_DIR$/mydhtclient.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/mydhtserver.py" afterPath="$PROJECT_DIR$/mydhtserver.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cmdapp.py" afterPath="$PROJECT_DIR$/cmdapp.py" />
     </list>
     <ignored path="MyDHT.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -31,10 +28,10 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="mydhtserver.py" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="mydhtserver.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/mydhtserver.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="112" column="0" selection-start="4143" selection-end="4143" vertical-scroll-proportion="0.88709676">
+            <state line="108" column="5" selection-start="3979" selection-end="3979" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -52,7 +49,7 @@
       <file leaf-file-name="MyDHTTable.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/MyDHTTable.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="16" column="16" selection-start="286" selection-end="286" vertical-scroll-proportion="0.0">
+            <state line="20" column="0" selection-start="413" selection-end="413" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -61,16 +58,16 @@
       <file leaf-file-name="TestMyDHT.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/TestMyDHT.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="32" column="58" selection-start="1177" selection-end="1177" vertical-scroll-proportion="0.0">
+            <state line="19" column="24" selection-start="518" selection-end="518" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="TestLargeNetworkLinuxWithFork.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="TestLargeNetworkLinuxWithFork.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="56" column="20" selection-start="1707" selection-end="1707" vertical-scroll-proportion="0.0">
+            <state line="57" column="10" selection-start="1727" selection-end="1727" vertical-scroll-proportion="1.3351254">
               <folding />
             </state>
           </provider>
@@ -97,7 +94,7 @@
       <file leaf-file-name="cmdapp.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/cmdapp.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="20" column="43" selection-start="709" selection-end="709" vertical-scroll-proportion="0.0">
+            <state line="66" column="45" selection-start="1935" selection-end="1935" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -131,16 +128,16 @@
   <component name="IdeDocumentHistory">
     <option name="changedFiles">
       <list>
-        <option value="$PROJECT_DIR$/cmdapp.py" />
         <option value="$PROJECT_DIR$/TestLargeNetwork.py" />
         <option value="$PROJECT_DIR$/mydht.py" />
         <option value="$PROJECT_DIR$/client.py" />
-        <option value="$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py" />
         <option value="$PROJECT_DIR$/HashRing.py" />
         <option value="$PROJECT_DIR$/mydhtclient.py" />
         <option value="$PROJECT_DIR$/TestMyDHT.py" />
-        <option value="$PROJECT_DIR$/MyDHTTable.py" />
         <option value="$PROJECT_DIR$/mydhtserver.py" />
+        <option value="$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py" />
+        <option value="$PROJECT_DIR$/MyDHTTable.py" />
+        <option value="$PROJECT_DIR$/cmdapp.py" />
       </list>
     </option>
   </component>
@@ -450,7 +447,7 @@
     <option name="CHANGED_ON_SERVER_INTERVAL" value="60" />
     <option name="SHOW_ONLY_CHANGED_IN_SELECTION_DIFF" value="true" />
     <option name="FORCE_NON_EMPTY_COMMENT" value="false" />
-    <option name="LAST_COMMIT_MESSAGE" value="Intermediate checkin" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added more commands to server." />
     <option name="MAKE_NEW_CHANGELIST_ACTIVE" value="true" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="false" />
     <option name="CHECK_FILES_UP_TO_DATE_BEFORE_COMMIT" value="false" />
@@ -467,6 +464,7 @@
     <MESSAGE value="Some networking done.&#10;Doesn't really work now but soon." />
     <MESSAGE value="Working on it." />
     <MESSAGE value="Intermediate checkin" />
+    <MESSAGE value="Added more commands to server." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -519,13 +517,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/cmdapp.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="20" column="43" selection-start="709" selection-end="709" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/HashRing.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="15" column="45" selection-start="323" selection-end="323" vertical-scroll-proportion="0.0">
@@ -561,30 +552,37 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py">
+    <entry file="file://$PROJECT_DIR$/mydhtserver.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="56" column="20" selection-start="1707" selection-end="1707" vertical-scroll-proportion="0.0">
+        <state line="108" column="5" selection-start="3979" selection-end="3979" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/TestMyDHT.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="32" column="58" selection-start="1177" selection-end="1177" vertical-scroll-proportion="0.0">
+        <state line="19" column="24" selection-start="518" selection-end="518" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/MyDHTTable.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="16" column="16" selection-start="286" selection-end="286" vertical-scroll-proportion="0.0">
+        <state line="20" column="0" selection-start="413" selection-end="413" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/mydhtserver.py">
+    <entry file="file://$PROJECT_DIR$/cmdapp.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="112" column="0" selection-start="4143" selection-end="4143" vertical-scroll-proportion="0.88709676">
+        <state line="66" column="45" selection-start="1935" selection-end="1935" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="57" column="10" selection-start="1727" selection-end="1727" vertical-scroll-proportion="1.3351254">
           <folding />
         </state>
       </provider>

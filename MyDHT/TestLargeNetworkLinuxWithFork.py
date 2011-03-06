@@ -9,8 +9,9 @@ from mydhtserver import MyDHT
 
 __author__ = 'Johan'
 host = "localhost"
-port = 50400
-NODES=3
+port = 50030
+NODES=10
+number_of_values=100000
 class TestLargeNetwork(unittest.TestCase):
 #    def startservernode(self,host,port,othernode=None):
 #        """ Starts a DHT
@@ -20,10 +21,10 @@ class TestLargeNetwork(unittest.TestCase):
         print "setting up"
         self.server = Server(host,port)
         self.dht = MyDHTClient()
-        self.dht.verbose = True
+        self.dht.verbose = False
         # Starts a new server
         nodes = 0
-        verbose = True
+        verbose = False
         joinserver = None
         self.pids = []
         self.servers = []
@@ -51,15 +52,25 @@ class TestLargeNetwork(unittest.TestCase):
 
     def test_1put(self):
         time.sleep(2)
-        for i in range(100):
+        for i in range(number_of_values):
             response = self.dht.sendcommand(self.servers[i % NODES],MyDHTTable.PUT,"key"+str(i),"value"+str(i))
+            if (i % 10000) == 0: print "10k done"
             self.assertEquals(response,"PUT OK key"+str(i))
-        for i in range(100):
-            response = self.dht.sendcommand(self.servers[i % NODES],MyDHTTable.GET,"key"+str(i))
-            self.assertEquals(response,"value"+str(i))
-        for i in range(100):
-            response = self.dht.sendcommand(self.servers[i % NODES],MyDHTTable.DEL,"key"+str(i))
-            self.assertEquals(response,"DEL OK key"+str(i))
+        #for i in range(number_of_values):
+        #    response = self.dht.sendcommand(self.servers[i % NODES],"whereis","key"+str(i))
+        #    print response
+        for server in self.servers:
+            response = self.dht.sendcommand(server,"count")
+            print response
+        #for server in self.servers:
+        #    response = self.dht.sendcommand(server,"getmap")
+        #    print response
+        #for i in range(number_of_values):
+        #    response = self.dht.sendcommand(self.servers[i % NODES],MyDHTTable.GET,"key"+str(i))
+        #    self.assertEquals(response,"value"+str(i))
+        #for i in range(number_of_values):
+        #    response = self.dht.sendcommand(self.servers[i % NODES],MyDHTTable.DEL,"key"+str(i))
+        #    self.assertEquals(response,"DEL OK key"+str(i))
 
 if __name__ == '__main__':
     unittest.main()
