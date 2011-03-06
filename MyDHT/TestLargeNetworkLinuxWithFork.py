@@ -9,7 +9,7 @@ from mydhtserver import MyDHT
 
 __author__ = 'Johan'
 host = "localhost"
-port = 50299
+port = 50400
 NODES=3
 class TestLargeNetwork(unittest.TestCase):
 #    def startservernode(self,host,port,othernode=None):
@@ -51,13 +51,13 @@ class TestLargeNetwork(unittest.TestCase):
 
     def test_1put(self):
         time.sleep(2)
-        for i in range(1000):
+        for i in range(100):
             response = self.dht.sendcommand(self.servers[i % NODES],MyDHTTable.PUT,"key"+str(i),"value"+str(i))
             self.assertEquals(response,"PUT OK key"+str(i))
-        for i in range(1000):
+        for i in range(100):
             response = self.dht.sendcommand(self.servers[i % NODES],MyDHTTable.GET,"key"+str(i))
             self.assertEquals(response,"value"+str(i))
-        for i in range(1000):
+        for i in range(100):
             response = self.dht.sendcommand(self.servers[i % NODES],MyDHTTable.DEL,"key"+str(i))
             self.assertEquals(response,"DEL OK key"+str(i))
 

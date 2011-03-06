@@ -8,6 +8,7 @@ from HashRing import HashRing, Server
 from MyDHTTable import MyDHTTable
 from cmdapp import CmdApp
 from mydhtclient import MyDHTClient
+from cStringIO import StringIO
 
 _block = 1024
 
@@ -47,6 +48,7 @@ class MyDHT(CmdApp):
         self.is_process = thread
         if verbose:
             self.verbose = True
+            self.client.verbose = True
         if logfile:
             sys.stdout = open(logfile,"w")
         self.serve()
@@ -77,29 +79,34 @@ class MyDHT(CmdApp):
         """
         sockfile = clientsock.makefile('r') # wrap socket in dup file obj
         command = sockfile.readline()[:-1]
+        key = sockfile.readline()[:-1]
 
+        self.debug("received",command,key)
         # Commands that always should end up on this server
         if command == "join":
-            server = sockfile.readline()[:-1]
-            status = self.addnewserver(server)
+            status = self.addnewserver(key)
         elif command == "addnode":
-            newserver = sockfile.readline()[:-1]
-            self.hashring.add_node(newserver)
+            self.hashring.add_node(key)
             status = "added by "+str(self.thisserver)
-        elif command in ["PUT","GET","DEL"]:
-            key = sockfile.readline()[:-1]
+        elif command in [self.map.PUT, self.map.GET, self.map.DEL]:
             key_is_at = self.hashring.get_node(key)
             self.debug(key,"is at",str(key_is_at),"according to",str(self.hashring))
             value = None
             if command == MyDHTTable.PUT:
                 value = sockfile.readline()[:-1]
-
+                
             # Check if key is found locally
             if self.thisserver == key_is_at:
                 status = self.map.perform(command,key,value)
             else:
                 # Forward the request to the correct server
                 status = self.client.sendcommand(key_is_at,command,key,value)
+        elif command == "whereis":
+            status = str(self.hashring.get_node(key))
+        elif command == "count":
+            status = str(self.thisserver) + ": " + str(self.map.count())
+        elif command == "getmap":
+            status = str(self.thisserver) + ":\n" + str(self.map)
         else:
             self.debug("Invalid command",command)
             status = "INVALID_COMMAND"

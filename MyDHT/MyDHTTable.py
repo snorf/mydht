@@ -8,6 +8,14 @@ class MyDHTTable():
     def __init__(self):
         self.map = {}
 
+    def count(self):
+        """ Returns number of keys in map
+        """
+        return len(self.map)
+
+    def __str__(self):
+         return "\n".join(map(lambda keyvalue: str(keyvalue[0]) + ":" + str(keyvalue[1]), self.map.viewitems()))
+
     def perform(self,command,key,value):
         """ Perform `command` with `key` and `value`
         """

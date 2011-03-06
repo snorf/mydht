@@ -13,7 +13,7 @@ class Server():
 
 class HashRing(object):
 
-    def __init__(self, nodes=None, replicas=1):
+    def __init__(self, nodes=None, replicas=3):
         """Manages a hash ring.
 
         `nodes` is a list of objects that have a proper __str__ representation.
@@ -35,6 +35,10 @@ class HashRing(object):
     def add_node(self, node):
         """Adds a `node` to the hash ring (including a number of replicas).
         """
+        if not isinstance(node,Server):
+            host, port = node.split(":")
+            node = Server(host,port)
+
         for i in xrange(0, self.replicas):
             key = self.gen_key('%s:%s' % (node, i))
             self.ring[key] = node
