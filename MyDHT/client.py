@@ -1,6 +1,6 @@
 from _socket import *
 import sys
-from mydht import MyDHT
+from mydhtclient import MyDHTClient
 from HashRing import Server
 from cmdapp import CmdApp
 
@@ -57,7 +57,7 @@ class Client(CmdApp):
             print "Error uploading:",self.file
             
     def client(self):
-        server, response = MyDHT().sendcommand(self.server,self.command,self.key,self.value)
+        server, response = MyDHTClient().sendcommand(self.server,self.command,self.key,self.value)
         print str(server),":",response
 
 if __name__ == "__main__":

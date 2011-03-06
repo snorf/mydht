@@ -29,6 +29,9 @@ class HashRing(object):
             for node in nodes:
                 self.add_node(node)
 
+    def __str__(self):
+        return " ".join(map(lambda server: str(server),self.ring.values()))
+
     def add_node(self, node):
         """Adds a `node` to the hash ring (including a number of replicas).
         """

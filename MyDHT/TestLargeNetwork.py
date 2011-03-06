@@ -2,7 +2,7 @@ import os
 import time
 import unittest
 from HashRing import Server
-from mydht import MyDHT
+from mydhtserver import MyDHT
 
 __author__ = 'Johan'
 host = "localhost"

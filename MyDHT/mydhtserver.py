@@ -2,9 +2,13 @@ import collections
 import signal
 from socket import *
 import sys
+import os
 import thread
 from HashRing import HashRing, Server
+from MyDHTTable import MyDHTTable
 from cmdapp import CmdApp
+from mydhtclient import MyDHTClient
+
 _block = 1024
 
 class MyDHT(CmdApp):
@@ -12,8 +16,9 @@ class MyDHT(CmdApp):
         """ Main class for the DHT server
         """
         CmdApp.__init__(self)
-        self.map = {}
         self.remoteserver = None
+        self.map = MyDHTTable()
+        self.client = MyDHTClient()
         self.usage = \
         """
            -p, --port
@@ -44,68 +49,7 @@ class MyDHT(CmdApp):
             self.verbose = True
         if logfile:
             sys.stdout = open(logfile,"w")
-            sys.stderr = sys.stderr
         self.serve()
-
-    def sendcommand(self,server,command,*values):
-        """ Sends a `command` to another `server` in the ring
-        """
-        # Check if server is a list of servers
-        if isinstance(server,collections.Iterable):
-            fromserver, data = None, None
-            for srv in server:
-                try:
-                    fromserver, data = self.sendcommand(srv,command,*values)
-                    if command == "get":
-                        break
-                except:
-                    # Server is down?
-                    continue
-            return fromserver, data
-
-        self.debug("sending command to:", str(server), command, str(values))
-        sock = socket(AF_INET, SOCK_STREAM)
-        try:
-            sock.connect((server.bindaddress()))
-            sock.send(command + "\n")
-
-            # Send value(s) to another server
-            if values:
-                for val in values:
-                    sock.send(str(val) + "\n")
-
-            data = []
-            while(1):
-                incoming = sock.recv(_block)
-                if not incoming: break
-                else: data.append(incoming)
-
-            self.debug("response from server",data)
-
-            sock.close()
-            self.debug("closed connection to server")
-            # Return the concatenated data
-            return server, "".join(data)
-        except:
-            print "Error connecting to server"
-            return server,None
-
-    def handlecommand(self,command,key,value):
-        """ Handle `command` for `key` on this server
-        """
-        if command == "put":
-            self.map[key] = value
-        elif command == "get":
-            try:
-                return self.map[key]
-            except KeyError:
-                return "ERR_VALUE_NOT_FOUND"
-        elif command == "del":
-            try:
-                del self.map[key]
-            except KeyError:
-                return "ERR_VALUE_NOT_FOUND"
-        return "OK"
 
     def addnewserver(self,newserverhostport):
         """ Adds a new server to all existing nodes and
@@ -118,7 +62,7 @@ class MyDHT(CmdApp):
         # Add the new server to all existing nodes
         for server in self.hashring.ring.values():
             if self.thisserver != server:
-                self.sendcommand(server,"addnode",newserver)
+                self.client.sendcommand(server,"addnode",newserver)
         # Convert to a string list
         ring = map(lambda serv: str(serv),set(self.hashring.ring.values()))
         # Add new server to this ring
@@ -134,7 +78,6 @@ class MyDHT(CmdApp):
         sockfile = clientsock.makefile('r') # wrap socket in dup file obj
         command = sockfile.readline()[:-1]
 
-        server = self.thisserver
         # Commands that always should end up on this server
         if command == "join":
             server = sockfile.readline()[:-1]
@@ -142,38 +85,38 @@ class MyDHT(CmdApp):
         elif command == "addnode":
             newserver = sockfile.readline()[:-1]
             self.hashring.add_node(newserver)
-            status = "added"
-        elif command in ["put","get","del"]:
+            status = "added by "+str(self.thisserver)
+        elif command in ["PUT","GET","DEL"]:
             key = sockfile.readline()[:-1]
-            key_is_at = self.hashring.get_nodelist(key)
-            value = []
-            if command == "put":
+            key_is_at = self.hashring.get_node(key)
+            self.debug(key,"is at",str(key_is_at),"according to",str(self.hashring))
+            value = None
+            if command == MyDHTTable.PUT:
                 value = sockfile.readline()[:-1]
-                
-            # Check if key is found locally            
-            if(self.thisserver in key_is_at):
-                status = self.handlecommand(command,key,value)
+
+            # Check if key is found locally
+            if self.thisserver == key_is_at:
+                status = self.map.perform(command,key,value)
             else:
                 # Forward the request to the correct server
-                self.debug("forwarding",command,"to:",str(key_is_at))
-                server, status = self.sendcommand(key_is_at,command,key,value)
+                status = self.client.sendcommand(key_is_at,command,key,value)
         else:
             self.debug("Invalid command",command)
             status = "INVALID_COMMAND"
 
-        # Check if status is one or many messages
-        #self.debug("sending:",status)
-        clientsock.send(status)
-
+        # Send status or "BAD_STATUS"
+        clientsock.send(status or "BAD_STATUS")
         clientsock.close()
-        #self.debug("connection closed")
 
     def signal_handler(self,signal,frame):
+        """ Handle SIGINT
+        """
         self.debug("Exiting from SIGINT")
-        # Exit softly if this is a process
         if self.is_process:
+            # Exit softly if this is a subprocess
             os._exit(0)
         else:
+            # Exit hard if standalone
             sys.exit(0)
 
     def serve(self):
@@ -185,21 +128,22 @@ class MyDHT(CmdApp):
 
         # Register SIGINT handler
         signal.signal(signal.SIGINT, self.signal_handler)
-        
+
         if self.remoteserver:
             remotehost, remoteport = self.remoteserver.split(":")
             remoteserver = Server(remotehost,remoteport)
             # Send a join command to the existing server
-            server, ring = self.sendcommand(remoteserver,"join",self.thisserver)
+            ring = self.client.sendcommand(remoteserver,"join",self.thisserver)
             self.debug("got ring from server:",str(ring))
             # Convert |-separated list to Server-instances
             nodes =  map(lambda serv: Server(serv.split(":")[0],serv.split(":")[1]) ,ring.split("|"))
             # Initialize local hashring
             self.hashring = HashRing(nodes)
+            self.hashring.add_node(self.thisserver)
         else:
             # First server so this server is added
             self.hashring = HashRing([self.thisserver])
-            
+
         self.debug("Starting server at",str(self.thisserver))
         serversock = socket(AF_INET,SOCK_STREAM)
         try:
@@ -211,6 +155,6 @@ class MyDHT(CmdApp):
                 thread.start_new_thread(self.serverthread, (clientsock,))
         except error, msg:
             print "Unable to bind to socket: ",msg
-            
+
 if __name__ == "__main__":
     MyDHT().cmdlinestart()
