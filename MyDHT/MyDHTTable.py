@@ -1,10 +1,9 @@
+from cStringIO import StringIO
+from dhtcommand import DHTCommand
+
 __author__ = 'Johan'
 
 class MyDHTTable():
-    PUT = "PUT"
-    GET = "GET"
-    DEL = "DEL"
-    
     def __init__(self):
         self.map = {}
 
@@ -19,22 +18,32 @@ class MyDHTTable():
             values.append(key + ": " + self.map[key])
         return "\n".join(values)
 
-    def perform(self,command,key,value):
+    def gethtml(self,hostname):
+        webpage = StringIO()
+        webpage.write("<html>\n<head>Status for ")
+        webpage.write(hostname)
+        webpage.write("<br />\n</head>\n<body>\n")
+        for key in self.map.keys():
+            webpage.write(key + ": " + self.map[key] + "<br />")
+        webpage.write("</body>\n</html>\n")
+        return webpage.getvalue()
+
+    def perform(self,cmd):
         """ Perform `command` with `key` and `value`
         """
-        if command == "PUT":
-            self.map[key] = value
-            return "PUT OK "+key
-        elif command == "GET":
+        if cmd.command == DHTCommand.PUT:
+            self.map[cmd.key] = cmd.value
+            return "PUT OK "+cmd.key
+        elif cmd.command == DHTCommand.GET:
             try:
-                return self.map[key]
+                return self.map[cmd.key]
             except KeyError:
                 return "ERR_VALUE_NOT_FOUND"
-        elif command == "DEL":
+        elif cmd.command == DHTCommand.DEL:
             try:
-                del self.map[key]
-                return "DEL OK "+key
+                del self.map[cmd.key]
+                return "DEL OK "+cmd.key
             except KeyError:
                 return "ERR_VALUE_NOT_FOUND"
         else:
-            return "BAD_COMMAND: "+command
+            return "BAD_COMMAND: "+str(cmd)

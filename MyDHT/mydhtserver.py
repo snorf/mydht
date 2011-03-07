@@ -7,6 +7,7 @@ import thread
 from HashRing import HashRing, Server
 from MyDHTTable import MyDHTTable
 from cmdapp import CmdApp
+from dhtcommand import DHTCommand
 from mydhtclient import MyDHTClient
 from cStringIO import StringIO
 
@@ -64,7 +65,7 @@ class MyDHT(CmdApp):
         # Add the new server to all existing nodes
         for server in self.hashring.ring.values():
             if self.thisserver != server:
-                self.client.sendcommand(server,"addnode",newserver)
+                self.client.sendcommand(server,DHTCommand.ADDNODE,newserver)
         # Convert to a string list
         ring = map(lambda serv: str(serv),set(self.hashring.ring.values()))
         # Add new server to this ring
@@ -78,35 +79,44 @@ class MyDHT(CmdApp):
             perform the operation and connect to another server if necessary
         """
         sockfile = clientsock.makefile('r') # wrap socket in dup file obj
-        command = sockfile.readline()[:-1]
-        key = sockfile.readline()[:-1]
+        command = clientsock.recv(_block)
+        cmd = DHTCommand().parse(command)
 
-        self.debug("received",command,key)
-        # Commands that always should end up on this server
-        if command == "join":
-            status = self.addnewserver(key)
-        elif command == "addnode":
-            self.hashring.add_node(key)
-            status = "added by "+str(self.thisserver)
-        elif command in [self.map.PUT, self.map.GET, self.map.DEL]:
-            key_is_at = self.hashring.get_node(key)
-            self.debug(key,"is at",str(key_is_at),"according to",str(self.hashring))
+        self.debug("received",str(cmd))
+        if cmd.command in [DHTCommand.PUT,DHTCommand.GET,DHTCommand.DEL]:
+            key_is_at = self.hashring.get_node(cmd.key)
+            self.debug(cmd.key,"is at",str(key_is_at),"according to",str(self.hashring))
             value = None
-            if command == MyDHTTable.PUT:
-                value = sockfile.readline()[:-1]
-                
+            if cmd.command == DHTCommand.PUT:
+                received = 0
+                data = StringIO()
+                while received < cmd.size:
+                    incoming = clientsock.recv(cmd.size - received)
+                    if not incoming: break
+                    data.write(incoming)
+                    received += len(incoming)
+                cmd.value = data.getvalue()
             # Check if key is found locally
             if self.thisserver == key_is_at:
-                status = self.map.perform(command,key,value)
+                status = self.map.perform(cmd)
             else:
                 # Forward the request to the correct server
-                status = self.client.sendcommand(key_is_at,command,key,value)
-        elif command == "whereis":
-            status = str(self.hashring.get_node(key))
-        elif command == "count":
+                status = self.client.sendcommand(key_is_at,cmd)
+                
+        # Commands that always should end up on this server
+        elif cmd.command == DHTCommand.JOIN:
+            status = self.addnewserver(cmd.key)
+        elif cmd.command == DHTCommand.ADDNODE:
+            self.hashring.add_node(cmd.key)
+            status = "added by "+str(self.thisserver)
+        elif cmd.command == DHTCommand.WHEREIS:
+            status = str(self.hashring.get_node(cmd.key))
+        elif cmd.command == DHTCommand.COUNT:
             status = str(self.thisserver) + ": " + str(self.map.count())
-        elif command == "getmap":
+        elif cmd.command == DHTCommand.GETMAP:
             status = str(self.thisserver) + ":\n" + str(self.map)
+        elif cmd.command == DHTCommand.HTTPGET:
+            status = self.map.gethtml(str(self.thisserver))
         else:
             self.debug("Invalid command",command)
             status = "INVALID_COMMAND"
@@ -140,7 +150,7 @@ class MyDHT(CmdApp):
             remotehost, remoteport = self.remoteserver.split(":")
             remoteserver = Server(remotehost,remoteport)
             # Send a join command to the existing server
-            ring = self.client.sendcommand(remoteserver,"join",self.thisserver)
+            ring = self.client.sendcommand(remoteserver,DHTCommand.JOIN,self.thisserver)
             self.debug("got ring from server:",str(ring))
             # Convert |-separated list to Server-instances
             nodes =  map(lambda serv: Server(serv.split(":")[0],serv.split(":")[1]) ,ring.split("|"))
