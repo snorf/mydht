@@ -1,3 +1,4 @@
+import cmd
 import collections
 import signal
 from socket import *
@@ -102,24 +103,19 @@ class MyDHT(CmdApp):
             else:
                 # Forward the request to the correct server
                 status = self.client.sendcommand(key_is_at,cmd)
-                
-        # Commands that always should end up on this server
         elif cmd.command == DHTCommand.JOIN:
+            # A client wants to join the ring
             status = self.addnewserver(cmd.key)
         elif cmd.command == DHTCommand.ADDNODE:
+            # A new client has joined and should be added to this servers ring
             self.hashring.add_node(cmd.key)
             status = "added by "+str(self.thisserver)
         elif cmd.command == DHTCommand.WHEREIS:
+            # Just return the hostname that holds a key
             status = str(self.hashring.get_node(cmd.key))
-        elif cmd.command == DHTCommand.COUNT:
-            status = str(self.thisserver) + ": " + str(self.map.count())
-        elif cmd.command == DHTCommand.GETMAP:
-            status = str(self.thisserver) + ":\n" + str(self.map)
-        elif cmd.command == DHTCommand.HTTPGET:
-            status = self.map.gethtml(str(self.thisserver))
         else:
-            self.debug("Invalid command",command)
-            status = "INVALID_COMMAND"
+            # All other commands ends up in the table
+            status = self.map.perform(cmd)
 
         # Send status or "BAD_STATUS"
         clientsock.send(status or "BAD_STATUS")

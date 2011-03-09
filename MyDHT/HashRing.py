@@ -1,19 +1,26 @@
-import md5
+import hashlib
 
 class Server():
+    """ Conveience class that holds a host and a port
+        and provides a method for getting them as a tuple
+        for binding.
+    """
     def __init__(self,host,port):
         self.host = host
         self.port = int(port)
 
     def __str__(self):
+        """ Returns `host`:`port`
+        """
         return self.host + ":" + str(self.port)
 
     def bindaddress(self):
+        """ Returns (`host`,`port`)
+        """
         return self.host,self.port
 
 class HashRing(object):
-
-    def __init__(self, nodes=None, replicas=3):
+    def __init__(self, nodes=None, replicas=1):
         """Manages a hash ring.
 
         `nodes` is a list of objects that have a proper __str__ representation.
@@ -34,6 +41,7 @@ class HashRing(object):
 
     def add_node(self, node):
         """Adds a `node` to the hash ring (including a number of replicas).
+           If node is not already a `Server` it will become one.
         """
         if not isinstance(node,Server):
             host, port = node.split(":")
@@ -98,7 +106,7 @@ class HashRing(object):
                 yield self.ring[key]
 
     def get_nodelist(self, string_key):
-        """ Given a string key returns the nodes as a generator (but not neverending).
+        """ Given a string key returns the nodes as a set.
         """
         if not self.ring:
             return None
@@ -114,9 +122,7 @@ class HashRing(object):
     def gen_key(self, key):
         """Given a string key it returns a long value,
         this long value represents a place on the hash ring.
-
-        md5 is currently used because it mixes well.
         """
-        m = md5.new()
+        m = hashlib.sha1()
         m.update(key)
         return long(m.hexdigest(), 16)

@@ -27,13 +27,19 @@ class DHTCommand():
 
     def __init__(self,command=None,key=None,value=None):
         """ Initialize a command with `key`, `command` and `value`
+            if value is a file object read through it to get the size
+            and then rewind it.
         """
         if command is not None and command not in self.allcommand:
             raise Exception("Invalid command:",command)
         self.command = command or self.UNKNOWN
         self.key = str(key)
         self.value = value
-        self.size = len(value or [])
+        if isinstance(value,file):
+            self.size = len(value.read())
+            value.seek(0)
+        else:
+            self.size = len(value or [])
 
     def parse(self,command):
         """ Parse a padded message on the server side
@@ -54,8 +60,14 @@ class DHTCommand():
     def getmessage(self):
         """ Returns a padded message consisting of `size`:`command`:`value`:0...
         """
-        message = str(self.size) + self.SEPARATOR + str(self.command) + self.SEPARATOR + (self.key or "") + self.SEPARATOR
-        return message + "".zfill(_block-len(message))
-
+        message = str(self.size) + self.SEPARATOR + \
+                  str(self.command) + self.SEPARATOR + \
+                  (self.key or "") + self.SEPARATOR
+        # Add padding up to _block
+        message = message + ("0"*(_block-len(message)))
+        return message
+    
     def __str__(self):
+        """ Return a reader friendly representation of the message
+        """
         return self.allcommand.get(self.command) + "," + (self.key or "") + ","+str(self.size)

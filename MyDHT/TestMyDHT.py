@@ -1,7 +1,5 @@
 import unittest
-import thread
 from HashRing import Server
-from MyDHTTable import MyDHTTable
 from dhtcommand import DHTCommand
 from mydhtclient import MyDHTClient
 __author__ = 'Johan'
@@ -11,7 +9,7 @@ class TestMyDHT(unittest.TestCase):
 
     def setUp(self):
         host = "localhost"
-        self.ports = [50140,50141,50142]
+        self.ports = [50140]#,50141,50142]
         self.servers = []
         for port in self.ports:
             self.servers.append(Server(host,port))

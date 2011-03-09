@@ -1,12 +1,9 @@
 from _socket import *
-import collections
-import string
 import traceback
 from HashRing import Server
-from MyDHTTable import MyDHTTable
 from cmdapp import CmdApp
-from cStringIO import StringIO
-from dhtcommand import DHTCommand, DHTCommand
+from StringIO import StringIO
+from dhtcommand import DHTCommand
 
 __author__ = 'Johan'
 _block = 1024
@@ -18,15 +15,21 @@ class MyDHTClient(CmdApp):
         CmdApp.__init__(self)
         self.usage = \
         """
-           -c, --command
-             put, get, del
            -h, --hostname
              specify hostname (default: localhost)
+           -p, --port
+             specify port (default: 50140)
+           -c, --command
+             put, get, del
+           -k, --key
+             specify key
         """
 
 
-    def sendcommand(self,server,command,key=None,value=None):
+    def sendcommand(self,server,command,key=None,value=None,outfile=None):
         """ Sends a `command` to a `server` in the ring
+            `outfile` is used when the client wants the output
+            value written to an output stream.
         """
 
         # If command isn't already a DHTCommand, create one
@@ -38,7 +41,6 @@ class MyDHTClient(CmdApp):
         for retry in range(3):
             self.debug("sending command to:", str(server), str(message),"try number",retry)
             sock = socket(AF_INET, SOCK_STREAM)
-            data = StringIO()
 
             try:
                 sock.connect((server.bindaddress()))
@@ -47,30 +49,35 @@ class MyDHTClient(CmdApp):
 
                 # Send value to another server
                 if message.value:
+                    if not isinstance(message.value,file):
+                        # Copy string contents to StringIO object
+                        value = StringIO(message.value)
+                        
                     totalsent = 0
                     while totalsent < message.size:
-                        sent = sock.send(message.value[totalsent:])
+                        sent = sock.send(value.read(_block))
                         if sent == 0:
                             raise RuntimeError("socket connection broken")
                         totalsent += sent
 
                 # Using pseudofile
+                data = StringIO()
                 while 1:
                     incoming = sock.recv(_block)
                     if not incoming: break
-                    data.write(incoming)
+                    if outfile:
+                        outfile.write(incoming)
+                    else:
+                        data.write(incoming)
 
                 sock.close()
-                #self.debug("closed connection to server")
-                #self.debug("response from server",data.getvalue())
-                # Return the concatenated data
                 return data.getvalue()
             except:
                 # If it was a PUT or DEL we can return safely
                 # if we have already gotten an OK from the server
-                if command.command in [MyDHTTable.PUT,MyDHTTable.DEL]:
-                    if data.getvalue().startswith(command+" OK"):
-                        return data.getvalue()
+                #if command.command in [MyDHTTable.PUT,MyDHTTable.DEL]:
+                #    if data.getvalue().startswith(command+" OK"):
+                #        return data.getvalue()
                 print "Error connecting to server:"
                 print '-'*60
                 traceback.print_exc()
@@ -83,15 +90,16 @@ class MyDHTClient(CmdApp):
         try:
             port = int( self.getarg("-p") or self.getarg("--port",50140))
             host = self.getarg("-h") or self.getarg("--hostname","localhost")
-            key = self.getarg("-k") or self.getarg("-key")
+            key = self.getarg("-k") or self.getarg("--key")
+            outfile = self.getarg("-o") or self.getarg("--outfile")
             server = Server(host,port)
-            command = self.getarg('-c') or self.getarg('-command')
-            value = self.getarg("-val") or self.getarg("-value")
+            command = self.getarg('-c') or self.getarg('--command')
+            value = self.getarg("-val") or self.getarg("--value")
             self.debug("command:",\
-            str(self.server),self.command,self.key,self.value)
-            if self.command is None or self.key is None or self.server is None:
+            str(server),command,key,value)
+            if command is None or key is None or server is None:
                 self.help()
-            self.sendcommand(self.server,self.command,self.key,self.value)
+            self.sendcommand(server,command,key,value,outfile)
         except TypeError:
             self.help()
         self.client()
