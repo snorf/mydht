@@ -8,18 +8,18 @@ class MyDHTTable():
     def __init__(self):
         self.map = {}
 
-    def count(self):
-        """ Returns number of keys in map
-        """
-        return len(self.map)
-
     def __str__(self):
+        """ Returns a string representation of the map
+        """
         values = []
         for key in self.map.keys():
             values.append(key + ": " + self.map[key])
         return "\n".join(values)
 
     def getsizewithsuffix(self,size):
+        """ Adds a suffix to `size` and returns
+            "`size` suffix"
+        """
         if size > 1024*1024*1024:
             return str(size/(1024*1024*1024)) + " GB"
         elif size > 1024*1024:
@@ -36,7 +36,7 @@ class MyDHTTable():
         webpage = StringIO()
         webpage.write("<html>\n<head>DHT status page<br />\n")
         webpage.write("</head>\n<body>\n")
-        webpage.write("key count: "+str(len(self.map)))
+        webpage.write("key count: " + str(len(self.map)))
         webpage.write("<table border=\"1\">\n<tr>\n<td>key</td>\n<td>size</td>\n<td>hash</td>\n</tr>\n")
         size = 0
         for key in self.map.keys():
@@ -76,5 +76,4 @@ class MyDHTTable():
         elif cmd.command == DHTCommand.HTTPGET:
             return self.gethtml()
         else:
-            self.debug("Invalid command",str(cmd))
             return "BAD_COMMAND: "+str(cmd)
