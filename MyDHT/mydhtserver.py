@@ -1,10 +1,12 @@
 import cmd
 import collections
+import select
 import signal
 from socket import *
 import sys
 import os
 import thread
+import traceback
 from HashRing import HashRing, Server
 from MyDHTTable import MyDHTTable
 from cmdapp import CmdApp
@@ -87,22 +89,62 @@ class MyDHT(CmdApp):
         if cmd.command in [DHTCommand.PUT,DHTCommand.GET,DHTCommand.DEL]:
             key_is_at = self.hashring.get_node(cmd.key)
             self.debug(cmd.key,"is at",str(key_is_at),"according to",str(self.hashring))
-            value = None
-            if cmd.command == DHTCommand.PUT:
-                received = 0
-                data = StringIO()
-                while received < cmd.size:
-                    incoming = clientsock.recv(cmd.size - received)
-                    if not incoming: break
-                    data.write(incoming)
-                    received += len(incoming)
-                cmd.value = data.getvalue()
+
             # Check if key is found locally
             if self.thisserver == key_is_at:
+                if cmd.command == DHTCommand.PUT:
+                    received = 0
+                    data = StringIO()
+                    while received < cmd.size:
+                        incoming = clientsock.recv(cmd.size - received)
+                        if not incoming: break
+                        data.write(incoming)
+                        received += len(incoming)
+                    cmd.value = data.getvalue()
                 status = self.map.perform(cmd)
             else:
                 # Forward the request to the correct server
-                status = self.client.sendcommand(key_is_at,cmd)
+                #self.debug("sending command to:", str(server), str(command),"try number",retry)
+                sock = socket(AF_INET, SOCK_STREAM)
+
+                try:
+                    sock.connect((key_is_at.bindaddress()))
+                    # If value send the command and the size of value
+                    sock.send(cmd.getmessage())
+
+                    received = 0
+                    buf = bytearray(_block)
+                    while received < cmd.size:
+                        r, w, e = select.select([clientsock],[sock],[])
+                        if not r: select.select([clientsock],[],[])
+                        elif not w: select.select([],[sock],[])
+                        nobytes = clientsock.recv_into(buf,_block)
+                        received += nobytes
+                        sent = sock.sendall(buf[:nobytes])
+
+                    length = sock.recv(_block)
+                    clientsock.send(length)
+                    length = int(length.split("|")[0])
+
+                    received = 0
+                    while received < length:
+                        r, w, e = select.select([sock],[clientsock],[])
+                        if not r: select.select([sock],[],[])
+                        elif not w: select.select([],[clientsock],[])
+                        nobytes = sock.recv_into(buf,_block)
+                        received += nobytes
+                        clientsock.sendall(buf[:nobytes])
+                    sock.close()
+                    clientsock.shutdown(SHUT_WR)
+                    end = clientsock.recv(_block)
+                    clientsock.close()
+                    return
+                except:
+                    print "Error relaying to server:"
+                    print '-'*60
+                    traceback.print_exc()
+                    print '-'*60
+                status = "" #self.client.sendcommand(key_is_at,cmd)
         elif cmd.command == DHTCommand.JOIN:
             # A client wants to join the ring
             status = self.addnewserver(cmd.key)
@@ -117,8 +159,14 @@ class MyDHT(CmdApp):
             # All other commands ends up in the table
             status = self.map.perform(cmd)
 
-        # Send status or "BAD_STATUS"
-        clientsock.send(status or "BAD_STATUS")
+        # Only send the length to those who understand it
+        if cmd.command != DHTCommand.HTTPGET:
+            length = str(len(status)) + "|"
+            length = length + ("0"*(_block-len(length)))
+            clientsock.send(length)
+        clientsock.send(status)
+        clientsock.shutdown(SHUT_WR)
+        end = clientsock.recv(_block)
         clientsock.close()
 
     def signal_handler(self,signal,frame):
@@ -146,7 +194,8 @@ class MyDHT(CmdApp):
             remotehost, remoteport = self.remoteserver.split(":")
             remoteserver = Server(remotehost,remoteport)
             # Send a join command to the existing server
-            ring = self.client.sendcommand(remoteserver,DHTCommand.JOIN,self.thisserver)
+            command = DHTCommand(DHTCommand.JOIN,self.thisserver)
+            ring = self.client.sendcommand(remoteserver,command)
             self.debug("got ring from server:",str(ring))
             # Convert |-separated list to Server-instances
             nodes =  map(lambda serv: Server(serv.split(":")[0],serv.split(":")[1]) ,ring.split("|"))

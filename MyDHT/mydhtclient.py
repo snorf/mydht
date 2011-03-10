@@ -58,15 +58,16 @@ class MyDHTClient(CmdApp):
                             raise RuntimeError("socket connection broken")
                         totalsent += sent
 
-                command = sock.recv(_block)
-                cmd = DHTCommand().parse(command)
-
                 # Using pseudofile
                 data = StringIO()
+                length = sock.recv(_block)
+                length = int(length.split("|")[0])
+
                 received = 0
-                while received < cmd.size:
+                while received < length:
                     incoming = sock.recv(_block)
                     if not incoming: break
+                    received += len(incoming)
                     if outstream:
                         if isinstance(outstream,file):
                             # If outstream is a file, write to it
