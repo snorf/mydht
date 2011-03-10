@@ -26,58 +26,60 @@ class MyDHTClient(CmdApp):
         """
 
 
-    def sendcommand(self,server,command,key=None,value=None,outfile=None):
+    def sendcommand(self,server,command,outstream=None):
         """ Sends a `command` to a `server` in the ring
-            `outfile` is used when the client wants the output
+            `outstream` is used when the client wants the output
             value written to an output stream.
         """
 
         # If command isn't already a DHTCommand, create one
-        if not isinstance(command,DHTCommand):
-            message = DHTCommand(command,key,value)
-        else:
-            message = command
-            
+
         for retry in range(3):
-            self.debug("sending command to:", str(server), str(message),"try number",retry)
+            self.debug("sending command to:", str(server), str(command),"try number",retry)
             sock = socket(AF_INET, SOCK_STREAM)
 
             try:
                 sock.connect((server.bindaddress()))
                 # If value send the command and the size of value
-                sock.send(message.getmessage())
+                sock.send(command.getmessage())
 
                 # Send value to another server
-                if message.value:
-                    if not isinstance(message.value,file):
+                if command.value:
+                    if isinstance(command.value,str):
                         # Copy string contents to StringIO object
-                        value = StringIO(message.value)
+                        command.value = StringIO(command.value)
                         
                     totalsent = 0
-                    while totalsent < message.size:
-                        sent = sock.send(value.read(_block))
+                    while totalsent < command.size:
+                        incoming = command.value.read(_block)
+                        if not incoming: break
+                        sent = sock.send(incoming)
                         if sent == 0:
                             raise RuntimeError("socket connection broken")
                         totalsent += sent
 
+                command = sock.recv(_block)
+                cmd = DHTCommand().parse(command)
+
                 # Using pseudofile
                 data = StringIO()
-                while 1:
+                received = 0
+                while received < cmd.size:
                     incoming = sock.recv(_block)
                     if not incoming: break
-                    if outfile:
-                        outfile.write(incoming)
+                    if outstream:
+                        if isinstance(outstream,file):
+                            # If outstream is a file, write to it
+                            outstream.write(incoming)
+                        else:
+                            # else it's a socket, send to it
+                            outstream.send(incoming)
                     else:
                         data.write(incoming)
 
                 sock.close()
                 return data.getvalue()
             except:
-                # If it was a PUT or DEL we can return safely
-                # if we have already gotten an OK from the server
-                #if command.command in [MyDHTTable.PUT,MyDHTTable.DEL]:
-                #    if data.getvalue().startswith(command+" OK"):
-                #        return data.getvalue()
                 print "Error connecting to server:"
                 print '-'*60
                 traceback.print_exc()
@@ -99,7 +101,8 @@ class MyDHTClient(CmdApp):
             str(server),command,key,value)
             if command is None or key is None or server is None:
                 self.help()
-            self.sendcommand(server,command,key,value,outfile)
+            command = DHTCommand(command,key,value)
+            self.sendcommand(server,command,outfile)
         except TypeError:
             self.help()
         self.client()

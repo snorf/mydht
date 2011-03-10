@@ -5,22 +5,24 @@ class DHTCommand():
     PUT = 1
     GET = 2
     DEL = 3
-    JOIN = 4
-    ADDNODE = 5
-    WHEREIS = 6
-    COUNT = 7
-    GETMAP = 8
+    REPL = 4
+    JOIN = 10
+    ADDNODE = 11
+    WHEREIS = 12
+    COUNT = 13
+    GETMAP = 14
     HTTPGET = 98
     UNKNOWN = 99
     allcommand = \
     {1: "PUT",
      2: "GET",
      3: "DEL",
-     4: "JOIN",
-     5: "ADDNODE",
-     6: "WHEREIS",
-     7: "COUNT",
-     8: "GETMAP",
+     4: "REPL",
+     10: "JOIN",
+     11: "ADDNODE",
+     12: "WHEREIS",
+     13: "COUNT",
+     14: "GETMAP",
      98: "HTTPGET",
      99: "UNKNOWN"}
     SEPARATOR="|"

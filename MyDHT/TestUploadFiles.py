@@ -19,8 +19,11 @@ class TestMyDHT(unittest.TestCase):
             and send them to dht
         """
         for file in glob.glob("testfiles/*"):
+            if file.endswith(".downloaded"):
+                continue
             with open(file, "rb") as f:
-                response = self.dht.sendcommand(self.server,DHTCommand.PUT,file,f)
+                command = DHTCommand(DHTCommand.PUT,file,f)
+                response = self.dht.sendcommand(self.server,command)
             self.assertEquals(response,"PUT OK " + file)
             
     def test_2_DownloadFiles(self):
@@ -28,7 +31,9 @@ class TestMyDHT(unittest.TestCase):
             and send them to dht
         """
         for file in glob.glob("testfiles/*"):
+            if file.endswith(".downloaded"):
+                continue
             with open(file + ".downloaded", "wb") as f:
-                response = self.dht.sendcommand(self.server,DHTCommand.GET,file)
-                f.write(response)
+                command = DHTCommand(DHTCommand.GET,file)
+                self.dht.sendcommand(self.server,command,f)
         
