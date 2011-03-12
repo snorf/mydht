@@ -69,6 +69,8 @@ class MyDHTTable():
                 return "DEL OK "+cmd.key
             except KeyError:
                 return "ERR_VALUE_NOT_FOUND"
+        elif cmd.command == DHTCommand.HASKEY:
+            return self.map.has_key(cmd.key)
         elif cmd.command == DHTCommand.COUNT:
             return "count: " + str(self.map.count())
         elif cmd.command == DHTCommand.GETMAP:

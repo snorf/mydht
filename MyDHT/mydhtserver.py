@@ -1,5 +1,7 @@
+from Queue import Queue, Empty
 import cmd
 import collections
+import copy
 import select
 import signal
 from socket import *
@@ -21,7 +23,7 @@ class MyDHT(CmdApp):
         """ Main class for the DHT server
         """
         CmdApp.__init__(self)
-        self.remoteserver = None
+        self.remote_server = None
         self.map = MyDHTTable()
         self.client = MyDHTClient()
         self.usage = \
@@ -46,9 +48,9 @@ class MyDHT(CmdApp):
         except ValueError:
             self.help()
 
-    def start(self,host,port,remoteserver,verbose=None,logfile=None,is_process=False):
-        self.thisserver = Server(host,port)
-        self.remoteserver = remoteserver
+    def start(self,host,port,remote_server=None,verbose=None,logfile=None,is_process=False):
+        self.this_server = Server(host,port)
+        self.remote_server = remote_server
         self.is_process = thread
         if verbose:
             self.verbose = True
@@ -57,58 +59,72 @@ class MyDHT(CmdApp):
             sys.stdout = open(logfile,"w")
         self.serve()
 
-    def addnewserver(self,newserverhostport):
+    def add_new_server(self,new_server_host_port):
         """ Adds a new server to all existing nodes and
             sends the current ring back to it.
         """
-        self.debug("adding:",newserverhostport)
-        host, port = newserverhostport.split(":")
+        self.debug("adding:",new_server_host_port)
+        host, port = new_server_host_port.split(":")
         newserver = Server(host,port)
 
         # Add the new server to all existing nodes
-        for server in self.hashring.ring.values():
-            if self.thisserver != server:
-                self.client.sendcommand(server,DHTCommand.ADDNODE,newserver)
+        for server in self.hash_ring.ring.values():
+            if self.this_server != server:
+                command = DHTCommand(DHTCommand.ADDNODE,newserver)
+                self.client.sendcommand(server,command)
         # Convert to a string list
-        ring = map(lambda serv: str(serv),set(self.hashring.ring.values()))
+        ring = map(lambda serv: str(serv),set(self.hash_ring.ring.values()))
         # Add new server to this ring
-        self.hashring.add_node(newserver)
+        self.hash_ring.add_node(newserver)
         # Return |-separated list of nodes
         return "|".join(ring)
 
-    def serverthread(self,clientsock):
-        """ Thread that handles a client
-            `clientsock` is the socket where the client is connected
-            perform the operation and connect to another server if necessary
-        """
-        sockfile = clientsock.makefile('r') # wrap socket in dup file obj
-        command = clientsock.recv(_block)
-        cmd = DHTCommand().parse(command)
+    def handle_replica_command(self,cmd,clientsock):
+        # Find out where the key is found
+        key_is_at = self.hash_ring.get_replicas(cmd.key)
+        self.debug(cmd.key,"is at",str(key_is_at),"according to",str(self.hash_ring))
 
-        self.debug("received",str(cmd))
-        if cmd.command in [DHTCommand.PUT,DHTCommand.GET,DHTCommand.DEL]:
-            key_is_at = self.hashring.get_node(cmd.key)
-            self.debug(cmd.key,"is at",str(key_is_at),"according to",str(self.hashring))
+        status = "UNKNOWN_ERROR"
 
-            # Check if key is found locally
-            if self.thisserver == key_is_at:
-                if cmd.command == DHTCommand.PUT:
-                    received = 0
-                    data = StringIO()
-                    while received < cmd.size:
-                        incoming = clientsock.recv(cmd.size - received)
-                        if not incoming: break
-                        data.write(incoming)
-                        received += len(incoming)
-                    cmd.value = data.getvalue()
-                status = self.map.perform(cmd)
-            else:
-                # Forward the request to the correct server
-                #self.debug("sending command to:", str(server), str(command),"try number",retry)
-                sock = socket(AF_INET, SOCK_STREAM)
+        # Check if key is found locally
+        if self.this_server in key_is_at:
+            local = True
+            key_is_at.remove(self.this_server)
+        else:
+            local = False
 
-                try:
-                    sock.connect((key_is_at.bindaddress()))
+        if local:
+            # If the command is PUT, download the data before
+            # replicating
+            if cmd.command == DHTCommand.PUT:
+                received = 0
+                data = StringIO()
+                while received < cmd.size:
+                    incoming = clientsock.recv(cmd.size - received)
+                    if not incoming: break
+                    data.write(incoming)
+                    received += len(incoming)
+                cmd.value = data.getvalue()
+            status = self.map.perform(cmd)
+            # Replicate data to other nodes if it was not a GET command
+            if not cmd.replicate:
+                cmd.replicate = True
+                if cmd.command != DHTCommand.GET:
+                    for server in key_is_at:
+                        remote_status = self.client.sendcommand(server,copy.deepcopy(cmd))
+                        self.debug(remote_status)
+        else:
+            # Forward the request to the correct server
+            # In short use select to wait for the incoming and outgoing
+            # socket and the relay the message
+            # After one server has received the message break
+            # one of the "correct" servers will take care of replication
+            try:
+                # For all possible replica nodes
+                for server in key_is_at:
+                    sock = socket(AF_INET, SOCK_STREAM)
+                    
+                    sock.connect((server.bindaddress()))
                     # If value send the command and the size of value
                     sock.send(cmd.getmessage())
 
@@ -118,9 +134,9 @@ class MyDHT(CmdApp):
                         r, w, e = select.select([clientsock],[sock],[])
                         if not r: select.select([clientsock],[],[])
                         elif not w: select.select([],[sock],[])
-                        nobytes = clientsock.recv_into(buf,_block)
-                        received += nobytes
-                        sent = sock.sendall(buf[:nobytes])
+                        no_bytes = clientsock.recv_into(buf,_block)
+                        received += no_bytes
+                        sent = sock.sendall(buf[:no_bytes])
 
                     length = sock.recv(_block)
                     clientsock.send(length)
@@ -131,30 +147,46 @@ class MyDHT(CmdApp):
                         r, w, e = select.select([sock],[clientsock],[])
                         if not r: select.select([sock],[],[])
                         elif not w: select.select([],[clientsock],[])
-                        nobytes = sock.recv_into(buf,_block)
-                        received += nobytes
-                        clientsock.sendall(buf[:nobytes])
+                        no_bytes = sock.recv_into(buf,_block)
+                        received += no_bytes
+                        clientsock.sendall(buf[:no_bytes])
                     sock.close()
                     clientsock.shutdown(SHUT_WR)
                     end = clientsock.recv(_block)
                     clientsock.close()
-                    return
-                except:
-                    print "Error relaying to server:"
-                    print '-'*60
-                    traceback.print_exc()
-                    print '-'*60
-                status = "" #self.client.sendcommand(key_is_at,cmd)
+                    break
+                else:
+                    self.debug("No nodes were found")
+            except:
+                print "Error relaying to server: ", server
+                print '-'*60
+                traceback.print_exc()
+                print '-'*60
+        return status
+
+    def serverthread(self,clientsock):
+        """ Thread that handles a client
+            `clientsock` is the socket where the client is connected
+            perform the operation and connect to another server if necessary
+        """
+        command = clientsock.recv(_block)
+        cmd = DHTCommand().parse(command)
+
+        self.debug("received",str(cmd))
+        if cmd.command in [DHTCommand.PUT,DHTCommand.GET,DHTCommand.DEL]:
+            status = self.handle_replica_command(cmd,clientsock)
+            if not cmd.replicate:
+                return
         elif cmd.command == DHTCommand.JOIN:
             # A client wants to join the ring
-            status = self.addnewserver(cmd.key)
+            status = self.add_new_server(cmd.key)
         elif cmd.command == DHTCommand.ADDNODE:
             # A new client has joined and should be added to this servers ring
-            self.hashring.add_node(cmd.key)
-            status = "added by "+str(self.thisserver)
+            self.hash_ring.add_node(cmd.key)
+            status = "added by "+str(self.this_server)
         elif cmd.command == DHTCommand.WHEREIS:
             # Just return the hostname that holds a key
-            status = str(self.hashring.get_node(cmd.key))
+            status = str(self.hash_ring.get_node(cmd.key))
         else:
             # All other commands ends up in the table
             status = self.map.perform(cmd)
@@ -184,37 +216,37 @@ class MyDHT(CmdApp):
         """ Main server process
             Starts a new thread for new clients
         """
-        if not self.thisserver:
+        if not self.this_server:
             self.usage()
 
         # Register SIGINT handler
         signal.signal(signal.SIGINT, self.signal_handler)
 
-        if self.remoteserver:
-            remotehost, remoteport = self.remoteserver.split(":")
-            remoteserver = Server(remotehost,remoteport)
+        if self.remote_server:
+            remote_host, remote_port = self.remote_server.split(":")
+            remote_server = Server(remote_host,remote_port)
             # Send a join command to the existing server
-            command = DHTCommand(DHTCommand.JOIN,self.thisserver)
-            ring = self.client.sendcommand(remoteserver,command)
+            command = DHTCommand(DHTCommand.JOIN,self.this_server)
+            ring = self.client.sendcommand(remote_server,command)
             self.debug("got ring from server:",str(ring))
             # Convert |-separated list to Server-instances
-            nodes =  map(lambda serv: Server(serv.split(":")[0],serv.split(":")[1]) ,ring.split("|"))
-            # Initialize local hashring
-            self.hashring = HashRing(nodes)
-            self.hashring.add_node(self.thisserver)
+            nodes =  map(lambda server_string: Server(server_string.split(":")[0],server_string.split(":")[1]) ,ring.split("|"))
+            # Initialize local hash ring
+            self.hash_ring = HashRing(nodes)
+            self.hash_ring.add_node(self.this_server)
         else:
             # First server so this server is added
-            self.hashring = HashRing([self.thisserver])
+            self.hash_ring = HashRing([self.this_server])
 
-        self.debug("Starting server at",str(self.thisserver))
-        serversock = socket(AF_INET,SOCK_STREAM)
+        self.debug("Starting server at",str(self.this_server))
+        server_sock = socket(AF_INET,SOCK_STREAM)
         try:
-            serversock.bind((self.thisserver.bindaddress()))
-            serversock.listen(5)
+            server_sock.bind((self.this_server.bindaddress()))
+            server_sock.listen(5)
             while(1):
-                clientsock, clientaddr = serversock.accept()
+                client_sock, client_addr = server_sock.accept()
                 #self.debug("Server connected by", clientaddr)
-                thread.start_new_thread(self.serverthread, (clientsock,))
+                thread.start_new_thread(self.serverthread, (client_sock,))
         except error, msg:
             print "Unable to bind to socket: ",msg
 

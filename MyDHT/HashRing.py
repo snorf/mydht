@@ -20,13 +20,14 @@ class Server():
         return self.host,self.port
 
 class HashRing(object):
-    def __init__(self, nodes=None, replicas=1):
+    def __init__(self, nodes=None, distribution_points=1, replicas=3):
         """Manages a hash ring.
 
         `nodes` is a list of objects that have a proper __str__ representation.
-        `replicas` indicates how many virtual points should be used pr. node,
-        replicas are required to improve the distribution.
+        `distribution_points` indicates how many virtual points should be used pr. node,
+        distribution_points are required to improve the distribution.
         """
+        self.distribution_points = distribution_points
         self.replicas = replicas
 
         self.ring = dict()
@@ -47,7 +48,7 @@ class HashRing(object):
             host, port = node.split(":")
             node = Server(host,port)
 
-        for i in xrange(0, self.replicas):
+        for i in xrange(0, self.distribution_points):
             key = self.gen_key('%s:%s' % (node, i))
             self.ring[key] = node
             self._sorted_keys.append(key)
@@ -57,7 +58,7 @@ class HashRing(object):
     def remove_node(self, node):
         """Removes `node` from the hash ring and its replicas.
         """
-        for i in xrange(0, self.replicas):
+        for i in xrange(0, self.distribution_points):
             key = self.gen_key('%s:%s' % (node, i))
             del self.ring[key]
             self._sorted_keys.remove(key)
@@ -87,6 +88,22 @@ class HashRing(object):
                 return self.ring[node], i
 
         return self.ring[nodes[0]], 0
+
+    def get_replicas(self, string_key):
+        """ Given a `string_key` return the replica nodes that can hold the key
+            The replica nodes is just 3 consecutive nodes at the moment
+        """
+
+        if not self.ring:
+            return None
+
+        nodelist = []
+        for key in self.get_nodes(string_key):
+            nodelist.append(key)
+            if(len(nodelist) == self.replicas):
+                break;
+
+        return nodelist
 
     def get_nodes(self, string_key):
         """Given a string key it returns the nodes as a generator that can hold the key.

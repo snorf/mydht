@@ -5,7 +5,10 @@ class DHTCommand():
     PUT = 1
     GET = 2
     DEL = 3
-    REPL = 4
+    HASKEY = 5
+    PURGE = 7
+    LEAVE = 8
+    REMOVE = 9
     JOIN = 10
     ADDNODE = 11
     WHEREIS = 12
@@ -17,7 +20,10 @@ class DHTCommand():
     {1: "PUT",
      2: "GET",
      3: "DEL",
-     4: "REPL",
+     5: "HASKEY",
+     7: "PURGE",
+     8: "LEAVE",
+     9: "REMOVE",
      10: "JOIN",
      11: "ADDNODE",
      12: "WHEREIS",
@@ -37,6 +43,7 @@ class DHTCommand():
         self.command = command or self.UNKNOWN
         self.key = str(key)
         self.value = value
+        self.replicate = False
         if isinstance(value,file):
             self.size = len(value.read())
             value.seek(0)
@@ -53,8 +60,8 @@ class DHTCommand():
             commands = command.split(self.SEPARATOR)
             self.size = int(commands[0])
             self.command = int(commands[1])
-            if len(commands) == 4:
-                self.key = commands[2]
+            self.key = commands[2]
+            self.replicate = (commands[3] == "True")
         else:
             self.command = self.UNKNOWN
         return self
@@ -64,7 +71,9 @@ class DHTCommand():
         """
         message = str(self.size) + self.SEPARATOR + \
                   str(self.command) + self.SEPARATOR + \
-                  (self.key or "") + self.SEPARATOR
+                  (self.key or "") + self.SEPARATOR + \
+                  str(self.replicate) + self.SEPARATOR
+
         # Add padding up to _block
         message = message + ("0"*(_block-len(message)))
         return message
@@ -72,4 +81,7 @@ class DHTCommand():
     def __str__(self):
         """ Return a reader friendly representation of the message
         """
-        return self.allcommand.get(self.command) + "," + (self.key or "") + ","+str(self.size)
+        return self.allcommand.get(self.command) + "," + \
+               (self.key or "") + "," + \
+               str(self.size) + "," + \
+               str(self.replicate)
