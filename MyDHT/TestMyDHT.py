@@ -41,7 +41,7 @@ class TestMyDHT(unittest.TestCase):
     def test_4del(self):
         for i in range(number_of_values):
             response = self.dht.sendcommand(self.servers[i % len(self.ports)],DHTCommand.DEL,"key"+str(i))
-            #self.assertEquals(response,"DEL OK key"+str(i))
+            self.assertEquals(response,"DEL OK key"+str(i))
 
 if __name__ == '__main__':
     unittest.main()

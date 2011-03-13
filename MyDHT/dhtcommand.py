@@ -14,6 +14,7 @@ class DHTCommand():
     WHEREIS = 12
     COUNT = 13
     GETMAP = 14
+    BALANCE = 15
     HTTPGET = 98
     UNKNOWN = 99
     allcommand = \
@@ -29,6 +30,7 @@ class DHTCommand():
      12: "WHEREIS",
      13: "COUNT",
      14: "GETMAP",
+     15: "BALANCE",
      98: "HTTPGET",
      99: "UNKNOWN"}
     SEPARATOR="|"
@@ -43,7 +45,7 @@ class DHTCommand():
         self.command = command or self.UNKNOWN
         self.key = str(key)
         self.value = value
-        self.replicate = False
+        self.replicated = False
         if isinstance(value,file):
             self.size = len(value.read())
             value.seek(0)
@@ -61,7 +63,7 @@ class DHTCommand():
             self.size = int(commands[0])
             self.command = int(commands[1])
             self.key = commands[2]
-            self.replicate = (commands[3] == "True")
+            self.replicated = (commands[3] == "True")
         else:
             self.command = self.UNKNOWN
         return self
@@ -72,7 +74,7 @@ class DHTCommand():
         message = str(self.size) + self.SEPARATOR + \
                   str(self.command) + self.SEPARATOR + \
                   (self.key or "") + self.SEPARATOR + \
-                  str(self.replicate) + self.SEPARATOR
+                  str(self.replicated) + self.SEPARATOR
 
         # Add padding up to _block
         message = message + ("0"*(_block-len(message)))
@@ -84,4 +86,4 @@ class DHTCommand():
         return self.allcommand.get(self.command) + "," + \
                (self.key or "") + "," + \
                str(self.size) + "," + \
-               str(self.replicate)
+               str(self.replicated)

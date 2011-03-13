@@ -20,7 +20,7 @@ class Server():
         return self.host,self.port
 
 class HashRing(object):
-    def __init__(self, nodes=None, distribution_points=1, replicas=3):
+    def __init__(self, nodes=None, distribution_points=3, replicas=3):
         """Manages a hash ring.
 
         `nodes` is a list of objects that have a proper __str__ representation.
@@ -51,7 +51,8 @@ class HashRing(object):
         for i in xrange(0, self.distribution_points):
             key = self.gen_key('%s:%s' % (node, i))
             self.ring[key] = node
-            self._sorted_keys.append(key)
+            if key not in self._sorted_keys:
+                self._sorted_keys.append(key)
 
         self._sorted_keys.sort()
 
@@ -60,8 +61,11 @@ class HashRing(object):
         """
         for i in xrange(0, self.distribution_points):
             key = self.gen_key('%s:%s' % (node, i))
-            del self.ring[key]
-            self._sorted_keys.remove(key)
+            if self.ring.has_key(key):
+                del self.ring[key]
+            if key in self._sorted_keys:
+                self._sorted_keys.remove(key)
+
 
     def get_node(self, string_key):
         """Given a string key a corresponding node in the hash ring is returned.
@@ -89,8 +93,9 @@ class HashRing(object):
 
         return self.ring[nodes[0]], 0
 
-    def get_replicas(self, string_key):
+    def get_replicas(self, string_key, exclude_server=None):
         """ Given a `string_key` return the replica nodes that can hold the key
+            `exclude_server` will be removed from the list before return.
             The replica nodes is just 3 consecutive nodes at the moment
         """
 
@@ -99,9 +104,13 @@ class HashRing(object):
 
         nodelist = []
         for key in self.get_nodes(string_key):
-            nodelist.append(key)
-            if(len(nodelist) == self.replicas):
-                break;
+            if key not in nodelist:
+                nodelist.append(key)
+            if len(nodelist) == self.replicas:
+                break
+
+        if exclude_server in nodelist:
+            nodelist.remove(exclude_server)
 
         return nodelist
 
@@ -122,18 +131,18 @@ class HashRing(object):
             for key in self._sorted_keys:
                 yield self.ring[key]
 
-    def get_nodelist(self, string_key):
+    def get_nodelist(self):
         """ Given a string key returns the nodes as a set.
         """
         if not self.ring:
             return None
 
-        node, pos = self.get_node_pos(string_key)
         nodelist = []
-        for key in self._sorted_keys[pos:]:
-            nodelist.append(self.ring[key])
+        for key in self._sorted_keys:
+            if self.ring[key] not in nodelist:
+                nodelist.append(self.ring[key])
 
-        return set(nodelist)
+        return nodelist
 
 
     def gen_key(self, key):

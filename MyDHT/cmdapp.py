@@ -28,7 +28,7 @@ class CmdApp:
         """
         try:
             return self.env[name]
-        except Exception:
+        except KeyError:
             return default
 
 
@@ -38,7 +38,7 @@ class CmdApp:
         try:
             self.args.remove(tag)
             return 1
-        except Exception:
+        except ValueError:
             return 0
 
     def getarg(self, tag, default=None):
@@ -63,5 +63,5 @@ class CmdApp:
     def now(self): return time.ctime(time.time())
 
     def debug(self,*message):
-        if(self.verbose):
+        if self.verbose:
             print "["+self.now()+"]:",message

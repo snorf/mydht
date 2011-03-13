@@ -54,7 +54,7 @@ class MyDHTClient(CmdApp):
                         incoming = command.value.read(_block)
                         if not incoming: break
                         sent = sock.send(incoming)
-                        if sent == 0:
+                        if not sent:
                             raise RuntimeError("socket connection broken")
                         totalsent += sent
 
@@ -87,6 +87,14 @@ class MyDHTClient(CmdApp):
                 print '-'*60
         return None
 
+
+    def get_command(self, string):
+        for i,command in DHTCommand().allcommand.iteritems():
+            if command == string.upper():
+                return i
+        else:
+            return 0
+
     def cmdlinestart(self):
         """ Parse command line parameters and start client
         """
@@ -102,11 +110,11 @@ class MyDHTClient(CmdApp):
             str(server),command,key,value)
             if command is None or key is None or server is None:
                 self.help()
+            command = self.get_command(command)
             command = DHTCommand(command,key,value)
             self.sendcommand(server,command,outfile)
         except TypeError:
             self.help()
-        self.client()
 
 if __name__ == "__main__":
     MyDHTClient().cmdlinestart()
