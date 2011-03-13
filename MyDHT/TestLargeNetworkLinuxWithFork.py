@@ -3,7 +3,7 @@ import signal
 import time
 import unittest
 from HashRing import Server
-from MyDHTTable import MyDHTTable
+from mydhttable import MyDHTTable
 from mydhtclient import MyDHTClient
 from mydhtserver import MyDHT
 

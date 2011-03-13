@@ -1,6 +1,3 @@
-from Queue import Queue, Empty
-import cmd
-import collections
 import copy
 import select
 import signal
@@ -11,15 +8,15 @@ import thread
 import threading
 import traceback
 from HashRing import HashRing, Server
-from MyDHTTable import MyDHTTable
+from mydhttable import MyDHTTable
 from cmdapp import CmdApp
 from dhtcommand import DHTCommand
 from mydhtclient import MyDHTClient
 from cStringIO import StringIO
 
-_block = 1024
+_block = 4096
 
-class MyDHT(CmdApp):
+class MyDHTServer(CmdApp):
     def __init__(self):
         """ Main class for the DHT server
         """
@@ -51,6 +48,13 @@ class MyDHT(CmdApp):
             self.help()
 
     def start(self,host,port,remote_server=None,verbose=None,logfile=None,is_process=False):
+        """ Starts the server with `hostname`, `port`
+            If `remove_server` is not None it will be contacted to join an existing ring
+            `verbose` enables debug logging
+            `logfile` specifies a logfile instead of stdout
+            `is_process` is used when starting servers as processes, it is used to exit
+            in a way pyunit likes if True.
+        """
         self.this_server = Server(host,port)
         self.remote_server = remote_server
         self.is_process = is_process
@@ -63,7 +67,7 @@ class MyDHT(CmdApp):
 
     def add_new_node(self,new_node):
         """ Adds a new server to all existing nodes and
-            sends the current ring back to it.
+            returns a |-separated list of the current ring.
         """
         self.ring_lock.acquire()
         self.debug("adding:",new_node)
@@ -108,7 +112,7 @@ class MyDHT(CmdApp):
 
     def decommission(self):
         """ Remove self from hash_ring and move all existing data
-            to new node.
+            to new nodes.
         """
         self.ring_lock.acquire()
         self.hash_ring.remove_node(self.this_server)
@@ -123,7 +127,8 @@ class MyDHT(CmdApp):
         self.ring_lock.release()
 
     def rebalance_all_nodes(self):
-        # Load balance this node
+        """ Load balance this node and then all other.
+        """
         self.load_balance()
 
         # And load balance the others
@@ -225,9 +230,8 @@ class MyDHT(CmdApp):
                         remote_status = self.client.sendcommand(server,copy.deepcopy(cmd))
                         self.debug(remote_status)
         else:
-            # Forward the request to the correct server
-            # After one server has received the message break
-            # one of the "correct" servers will take care of replication
+            # Forward request to one of the servers responsible for the key
+            # The responding server will take care of replication
             try:
                 # For all possible replica nodes
                 for server in key_is_at:
@@ -267,20 +271,20 @@ class MyDHT(CmdApp):
                 print '-'*60
         return status
 
-    def serverthread(self,clientsock):
+    def server_thread(self,client_sock):
         """ Thread that handles a client
-            `clientsock` is the socket where the client is connected
+            `client_sock` is the socket where the client is connected
             perform the operation and connect to another server if necessary
         """
-        command = clientsock.recv(_block)
+        command = client_sock.recv(_block)
         cmd = DHTCommand().parse(command)
 
         self.debug("received",str(cmd))
         if cmd.command in [DHTCommand.PUT,DHTCommand.GET,DHTCommand.DEL]:
-            status = self.handle_replica_command(cmd,clientsock)
+            status = self.handle_replica_command(cmd,client_sock)
+            # If the command was forwarded to another
+            # server we have already closed the socket
             if not cmd.replicated:
-                # If the command was forwarded to another
-                # server we have already closed the socket
                 return
         elif cmd.command == DHTCommand.JOIN:
             # A client wants to join the ring
@@ -310,8 +314,8 @@ class MyDHT(CmdApp):
                 status = "SHUTDOWN ok"
             # Just send error and close socket
             status = "UNKNOWN_COMMAND"
-            clientsock.send(status)
-            clientsock.close()
+            client_sock.send(status)
+            client_sock.close()
             return
         else:
             # All other commands ends up in the table
@@ -321,15 +325,15 @@ class MyDHT(CmdApp):
         if cmd.command != DHTCommand.HTTPGET:
             length = str(len(status)) + "|"
             length = length + ("0"*(_block-len(length)))
-            clientsock.send(length)
-        clientsock.send(status)
-        clientsock.shutdown(SHUT_WR)
-        end = clientsock.recv(_block)
-        clientsock.close()
+            client_sock.send(length)
+        client_sock.send(status)
+        client_sock.shutdown(SHUT_WR)
+        end = client_sock.recv(_block)
+        client_sock.close()
 
 
     def signal_handler(self,signal,frame):
-        """ Handle SIGINT
+        """ Handle SIGINT by doing decommission.
         """
         self.debug("Exiting from SIGINT")
         self.decommission()
@@ -342,7 +346,10 @@ class MyDHT(CmdApp):
 
     def serve(self):
         """ Main server process
-            Starts a new thread for new clients
+            Contact `remote_server` if any to join existing ring
+            or create a new one.
+
+            Starts a new `server_thread` for new clients
         """
         if not self.this_server:
             self.help()
@@ -365,6 +372,7 @@ class MyDHT(CmdApp):
         else:
             # First server so this server is added
             self.hash_ring = HashRing([self.this_server])
+        # Put the hash ring in the dht_table
         self.dht_table.set_hash_ring(self.hash_ring)
 
         self.debug("Starting server at",str(self.this_server))
@@ -375,9 +383,9 @@ class MyDHT(CmdApp):
             while 1:
                 client_sock, client_addr = server_sock.accept()
                 #self.debug("Server connected by", clientaddr)
-                thread.start_new_thread(self.serverthread, (client_sock,))
+                thread.start_new_thread(self.server_thread, (client_sock,))
         except error, msg:
             print "Unable to bind to socket: ",msg
 
 if __name__ == "__main__":
-    MyDHT().cmdlinestart()
+    MyDHTServer().cmdlinestart()

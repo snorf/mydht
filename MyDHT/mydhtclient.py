@@ -6,7 +6,7 @@ from StringIO import StringIO
 from dhtcommand import DHTCommand
 
 __author__ = 'Johan'
-_block = 1024
+_block = 4096
 
 class MyDHTClient(CmdApp):
     def __init__(self):

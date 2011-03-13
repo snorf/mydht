@@ -3,11 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="e6a99f7c-8d86-49a3-927b-ae303682379e" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/HashRing.py" afterPath="$PROJECT_DIR$/HashRing.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/MyDHTTable.py" afterPath="$PROJECT_DIR$/MyDHTTable.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/TestMyDHT.py" afterPath="$PROJECT_DIR$/TestMyDHT.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/TestUploadFiles.py" afterPath="$PROJECT_DIR$/TestUploadFiles.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/cmdapp.py" afterPath="$PROJECT_DIR$/cmdapp.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py" afterPath="$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/dhtcommand.py" afterPath="$PROJECT_DIR$/dhtcommand.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/mydhtclient.py" afterPath="$PROJECT_DIR$/mydhtclient.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/mydhtserver.py" afterPath="$PROJECT_DIR$/mydhtserver.py" />
@@ -36,7 +32,25 @@
       <file leaf-file-name="mydhtserver.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/mydhtserver.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="80" column="42" selection-start="2590" selection-end="2590" vertical-scroll-proportion="0.0">
+            <state line="10" column="27" selection-start="195" selection-end="195" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="mydhttable.py" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/mydhttable.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="6" column="16" selection-start="124" selection-end="134" vertical-scroll-proportion="0.12592593">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="TestLargeNetwork.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/TestLargeNetwork.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="30" column="12" selection-start="674" selection-end="674" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -54,7 +68,7 @@
       <file leaf-file-name="mydhtclient.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/mydhtclient.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="97" column="27" selection-start="3266" selection-end="3266" vertical-scroll-proportion="0.0">
+            <state line="8" column="13" selection-start="192" selection-end="192" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -63,7 +77,7 @@
       <file leaf-file-name="dhtcommand.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/dhtcommand.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="58" column="45" selection-start="1445" selection-end="1445" vertical-scroll-proportion="0.0">
+            <state line="2" column="0" selection-start="35" selection-end="35" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -78,10 +92,10 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="TestUploadFiles.py" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="TestUploadFiles.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/TestUploadFiles.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="48" column="22" selection-start="1812" selection-end="1812" vertical-scroll-proportion="1.2096775">
+            <state line="34" column="35" selection-start="1189" selection-end="1189" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -91,15 +105,6 @@
         <entry file="file://$PROJECT_DIR$/cmdapp.py">
           <provider selected="true" editor-type-id="text-editor">
             <state line="66" column="38" selection-start="1927" selection-end="1927" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="MyDHTTable.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/MyDHTTable.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="95" column="44" selection-start="3571" selection-end="3571" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -141,12 +146,12 @@
         <option value="$PROJECT_DIR$/replicationthread.py" />
         <option value="$PROJECT_DIR$/TestMyDHT.py" />
         <option value="$PROJECT_DIR$/cmdapp.py" />
-        <option value="$PROJECT_DIR$/dhtcommand.py" />
         <option value="$PROJECT_DIR$/MyDHTTable.py" />
-        <option value="$PROJECT_DIR$/mydhtclient.py" />
         <option value="$PROJECT_DIR$/HashRing.py" />
-        <option value="$PROJECT_DIR$/mydhtserver.py" />
         <option value="$PROJECT_DIR$/TestUploadFiles.py" />
+        <option value="$PROJECT_DIR$/mydhtclient.py" />
+        <option value="$PROJECT_DIR$/dhtcommand.py" />
+        <option value="$PROJECT_DIR$/mydhtserver.py" />
       </list>
     </option>
   </component>
@@ -171,7 +176,7 @@
       <showLibraryContents />
       <hideEmptyPackages />
       <abbreviatePackageNames />
-      <autoscrollToSource />
+      <autoscrollToSource ProjectPane="true" />
       <autoscrollFromSource />
       <sortByType />
     </navigator>
@@ -532,6 +537,7 @@
     <frame x="1680" y="0" width="1680" height="1010" extended-state="0" />
     <editor active="false" />
     <layout>
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32982457" sideWeight="0.0" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32982457" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
@@ -545,7 +551,6 @@
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
     </layout>
@@ -564,7 +569,7 @@
     <option name="CHANGED_ON_SERVER_INTERVAL" value="60" />
     <option name="SHOW_ONLY_CHANGED_IN_SELECTION_DIFF" value="true" />
     <option name="FORCE_NON_EMPTY_COMMENT" value="false" />
-    <option name="LAST_COMMIT_MESSAGE" value="Primitive replication works! I like it! :)" />
+    <option name="LAST_COMMIT_MESSAGE" value="Replication works!&#10;Also decommission and remove seems to work.&#10;Next todo is purge and cleanup the code and fix more documentation." />
     <option name="MAKE_NEW_CHANGELIST_ACTIVE" value="true" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="false" />
     <option name="CHECK_FILES_UP_TO_DATE_BEFORE_COMMIT" value="false" />
@@ -587,6 +592,7 @@
     <MESSAGE value="Upload of files is now possible but not perfect (Test case provided)&#10;Intermediate nodes should stream values instead of downloading/uploading them (at least this should work in theory).&#10;Some cleanup of the server, moved map specific commands to dhttable.&#10;Changed hash algorithm to SHA-1." />
     <MESSAGE value="Relaying sockets is now working with select.&#10;This has to be refactored, it looks messy now.&#10;The only real feature left is replication which should be easy after relaying was implemented." />
     <MESSAGE value="Primitive replication works! I like it! :)" />
+    <MESSAGE value="Replication works!&#10;Also decommission and remove seems to work.&#10;Next todo is purge and cleanup the code and fix more documentation." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -603,21 +609,9 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://D:/Python27/Lib/unittest/case.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="493" column="0" selection-start="17866" selection-end="17866" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
     <entry file="file://$APPLICATION_HOME_DIR$/helpers/pycharm/utrunner.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="35" column="0" selection-start="927" selection-end="927" vertical-scroll-proportion="0.32258064" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/TestLargeNetwork.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="30" column="12" selection-start="674" selection-end="674" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/TestLargeNetworkLinuxWithFork.py">
@@ -648,28 +642,9 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="151" column="0" selection-start="5893" selection-end="5893" vertical-scroll-proportion="0.0" />
-      </provider>
-    </entry>
     <entry file="file://D:/Python27/Lib/socket.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="169" column="0" selection-start="5583" selection-end="5583" vertical-scroll-proportion="0.3327032">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/MyDHTTable.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="95" column="44" selection-start="3571" selection-end="3571" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/mydhtclient.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="97" column="27" selection-start="3266" selection-end="3266" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
@@ -688,23 +663,56 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/TestUploadFiles.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="34" column="35" selection-start="1189" selection-end="1189" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mydhtclient.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="8" column="13" selection-start="192" selection-end="192" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/dhtcommand.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="58" column="45" selection-start="1445" selection-end="1445" vertical-scroll-proportion="0.0">
+        <state line="2" column="0" selection-start="35" selection-end="35" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="151" column="0" selection-start="5893" selection-end="5893" vertical-scroll-proportion="0.0" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/MyDHTTable.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/mydhtserver.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="80" column="42" selection-start="2590" selection-end="2590" vertical-scroll-proportion="0.0">
+        <state line="10" column="27" selection-start="195" selection-end="195" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/TestUploadFiles.py">
+    <entry file="file://$PROJECT_DIR$/TestLargeNetwork.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="48" column="22" selection-start="1812" selection-end="1812" vertical-scroll-proportion="1.2096775">
+        <state line="30" column="12" selection-start="674" selection-end="674" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/mydhttable.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="6" column="16" selection-start="124" selection-end="134" vertical-scroll-proportion="0.12592593">
           <folding />
         </state>
       </provider>

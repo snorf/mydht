@@ -1,5 +1,5 @@
 __author__ = 'Johan'
-_block = 1024
+_block = 4096
 
 class DHTCommand():
     PUT = 1
