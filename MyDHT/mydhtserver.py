@@ -243,9 +243,9 @@ class MyDHTServer(CmdApp):
         else:
             # Forward request to one of the servers responsible for the key
             # The responding server will take care of replication
-            try:
-                # For all possible replica nodes
-                for server in key_is_at:
+            for server in key_is_at:
+                try:
+                    # For all possible replica nodes
                     # Connect to remote node
                     sock = socket(AF_INET, SOCK_STREAM)
                     sock.connect((server.bindaddress()))
@@ -260,7 +260,7 @@ class MyDHTServer(CmdApp):
                     length = self.client.read_length_from_socket(sock)
                     # Forward length to client
                     self.client.send_length_to_socket(length,client_sock)
-                
+
                     # Forward the answer from sock to clientsock
                     self.forward_data(sock,client_sock,length)
 
@@ -272,14 +272,15 @@ class MyDHTServer(CmdApp):
                     end = client_sock.recv(_block)
                     client_sock.close()
                     break
-                else:
-                    self.debug("No nodes were found")
-                    status = "No nodes where found"
-            except:
-                print "Error relaying to server: ", server
-                print '-'*60
-                traceback.print_exc()
-                print '-'*60
+                except Exception, e:
+                    print "Error relaying to server: ", server
+                    print '-'*60
+                    traceback.print_exc()
+                    print '-'*60
+            else:
+                self.debug("No nodes were found")
+                status = "No nodes where found"
+
         return status
 
     def server_thread(self,client_sock):
