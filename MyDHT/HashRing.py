@@ -103,10 +103,16 @@ class HashRing(object):
             return None
 
         nodelist = []
+
+        active_replicas = self.replicas
+        number_of_servers = len(self.ring) / self.distribution_points
+        if number_of_servers < self.replicas:
+            active_replicas = number_of_servers
+
         for key in self.get_nodes(string_key):
             if key not in nodelist:
                 nodelist.append(key)
-            if len(nodelist) == self.replicas:
+            if len(nodelist) == active_replicas:
                 break
 
         if exclude_server in nodelist:
@@ -149,6 +155,6 @@ class HashRing(object):
         """Given a string key it returns a long value,
         this long value represents a place on the hash ring.
         """
-        m = hashlib.sha1()
+        m = hashlib.md5()
         m.update(key)
         return long(m.hexdigest(), 16)

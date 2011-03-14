@@ -1,4 +1,5 @@
 from _socket import *
+import sys
 import traceback
 from HashRing import Server
 from cmdapp import CmdApp
@@ -25,6 +26,57 @@ class MyDHTClient(CmdApp):
              specify key
         """
 
+    def send_to_socket(self,data,size,socket):
+        """ Send `size` amount of `data` to `socket`
+            If data is a str it will be converted to
+            StringIO. If it is not an str it is assumed
+            to be some kind of stream object (ie file).
+        """
+        if isinstance(data,str):
+            # Copy string contents to StringIO object
+            data = StringIO(data)
+        totalsent = 0
+        while totalsent < size:
+            chunk = data.read(_block)
+            if not chunk: break
+            sent = socket.send(chunk)
+            if not sent:
+                raise RuntimeError("socket connection broken")
+            totalsent += sent        
+
+    def read_from_socket(self,size,socket,outstream=None):
+        """  Read `size` data from `socket` and save it
+             to either outstream (if it is an open file)
+             or return it as a string.
+        """
+        received = 0
+        data = StringIO()
+        while received < size:
+            incoming = socket.recv(_block)
+            if not incoming: break
+            received += len(incoming)
+            if isinstance(outstream,file):
+                # If outstream is a file, write to it
+                outstream.write(incoming)
+            else:
+                data.write(incoming)
+        return data.getvalue()
+
+    def send_length_to_socket(self,length,socket):
+        """ Create a new length packet and send it to `socket`
+        """
+        length = str(length) + "|"
+        length = length + ("0"*(_block-len(length)))
+        socket.send(length)
+
+    def read_length_from_socket(self,socket):
+        """ Read the length packet from a socket.
+            The packet is length + | + zero padding.
+            return it as an int.
+        """
+        length = socket.recv(_block)
+        length = int(length.split("|")[0])
+        return length
 
     def sendcommand(self,server,command,outstream=None):
         """ Sends a `command` to a `server` in the ring
@@ -45,41 +97,14 @@ class MyDHTClient(CmdApp):
 
                 # Send value to another server
                 if command.value:
-                    if isinstance(command.value,str):
-                        # Copy string contents to StringIO object
-                        command.value = StringIO(command.value)
-                        
-                    totalsent = 0
-                    while totalsent < command.size:
-                        incoming = command.value.read(_block)
-                        if not incoming: break
-                        sent = sock.send(incoming)
-                        if not sent:
-                            raise RuntimeError("socket connection broken")
-                        totalsent += sent
+                    self.send_to_socket(command.value,command.size,sock)
 
-                # Using pseudofile
-                data = StringIO()
-                length = sock.recv(_block)
-                length = int(length.split("|")[0])
+                length = self.read_length_from_socket(sock)
 
-                received = 0
-                while received < length:
-                    incoming = sock.recv(_block)
-                    if not incoming: break
-                    received += len(incoming)
-                    if outstream:
-                        if isinstance(outstream,file):
-                            # If outstream is a file, write to it
-                            outstream.write(incoming)
-                        else:
-                            # else it's a socket, send to it
-                            outstream.send(incoming)
-                    else:
-                        data.write(incoming)
+                data = self.read_from_socket(length,sock,outstream)
 
                 sock.close()
-                return data.getvalue()
+                return data
             except:
                 print "Error connecting to server:"
                 print '-'*60
@@ -108,11 +133,11 @@ class MyDHTClient(CmdApp):
             value = self.getarg("-val") or self.getarg("--value")
             self.debug("command:",\
             str(server),command,key,value)
-            if command is None or key is None or server is None:
+            if command is None or server is None:
                 self.help()
             command = self.get_command(command)
             command = DHTCommand(command,key,value)
-            self.sendcommand(server,command,outfile)
+            print self.sendcommand(server,command,outfile)
         except TypeError:
             self.help()
 

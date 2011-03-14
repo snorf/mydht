@@ -123,37 +123,54 @@ class MyDHTServer(CmdApp):
             if self.this_server != server:
                 command = DHTCommand(DHTCommand.LEAVE,self.this_server)
                 self.client.sendcommand(server,command)
-        self.load_balance()
+        # Load balance only on this node
+        self.load_balance(True)
         self.ring_lock.release()
 
-    def rebalance_all_nodes(self):
+    def load_balance(self,replicated):
         """ Load balance this node and then all other.
+            if `replicated` is False BALANCE will be sent to
+            all other nodes.
         """
-        self.load_balance()
+        status = self.internal_load_balance()
 
-        # And load balance the others
-        for server in self.hash_ring.get_nodelist():
-            if self.this_server != server:
-                command = DHTCommand(DHTCommand.BALANCE,node)
-                self.client.sendcommand(server,command)
+        if not replicated:
+            # And load balance the others
+            for server in self.hash_ring.get_nodelist():
+                if self.this_server != server:
+                    command = DHTCommand(DHTCommand.BALANCE,server)
+                    command.replicated = True
+                    self.client.sendcommand(server,command)
 
-    def load_balance(self):
+        return status
+    
+    def internal_load_balance(self):
         """ Go through all keys in map and check with all replica server
-            if they have the key, or else send it to them.
+            if they have an older version of the key, send the value.
+            if they have a newer version, get the value.
         """
         
         # For all keys in this map
         for key in self.dht_table.get_keys():
-            self.debug("moving: ",key)
             key_is_at = self.hash_ring.get_replicas(key,self.this_server)
             for server in key_is_at:
                 command = DHTCommand(DHTCommand.HASKEY,key)
                 status = self.client.sendcommand(server,command)
-                if status == "False":
-                    # Key is missing in destination server, move it
+                remote_time = float(status)
+                local_timestamp = float(self.dht_table.perform(command))
+                if remote_time < local_timestamp:
+                    # Key is missing or old
+                    self.debug("Copying: ",key,"to",server)
                     value = self.dht_table.perform(DHTCommand(DHTCommand.GET,key))
-                    command = DHTCommand(DHTCommand.PUT,key,value)
+                    command = DHTCommand(DHTCommand.PUT,key,value,local_timestamp)
                     status = self.client.sendcommand(server,command)
+                    self.debug(status)
+                elif remote_time > local_timestamp:
+                    # Remote object is newer, get it
+                    self.debug("Copying: ",key,"from",server)
+                    command = DHTCommand(DHTCommand.GET,key)
+                    value = self.client.sendcommand(server,command)
+                    status = self.dht_table.perform(DHTCommand(DHTCommand.PUT,key,value,remote_time))
                     self.debug(status)
         return "BALANCE ok"
 
@@ -213,14 +230,8 @@ class MyDHTServer(CmdApp):
         if local:
             # If the command is PUT, download the data before replicating
             if cmd.command == DHTCommand.PUT:
-                received = 0
-                data = StringIO()
-                while received < cmd.size:
-                    incoming = client_sock.recv(cmd.size - received)
-                    if not incoming: break
-                    data.write(incoming)
-                    received += len(incoming)
-                cmd.value = data.getvalue()
+                cmd.value = self.client.read_from_socket(cmd.size,client_sock)
+                
             status = self.dht_table.perform(cmd)
             # Replicate data to other nodes if it was not a GET command
             if not cmd.replicated:
@@ -246,10 +257,10 @@ class MyDHTServer(CmdApp):
                     self.forward_data(client_sock,sock,cmd.size)
 
                     # Receive length of answer
-                    length = sock.recv(_block)
-                    client_sock.send(length)
-                    length = int(length.split("|")[0])
-
+                    length = self.client.read_length_from_socket(sock)
+                    # Forward length to client
+                    self.client.send_length_to_socket(length,client_sock)
+                
                     # Forward the answer from sock to clientsock
                     self.forward_data(sock,client_sock,length)
 
@@ -307,7 +318,7 @@ class MyDHTServer(CmdApp):
             status = self.purge()
         elif cmd.command == DHTCommand.BALANCE:
             # Load balance this node
-            status = self.load_balance()
+            status = self.load_balance(cmd.replicated)
         elif cmd.command == DHTCommand.UNKNOWN:
             if command.startswith("GET /shutdown"):
                 self.decommission()
@@ -321,14 +332,18 @@ class MyDHTServer(CmdApp):
             # All other commands ends up in the table
             status = self.dht_table.perform(cmd)
 
-        # Do not send the length to a web browser
+        # Send length to all clients except a web browser (it will end up in the HTML)
         if cmd.command != DHTCommand.HTTPGET:
-            length = str(len(status)) + "|"
-            length = length + ("0"*(_block-len(length)))
-            client_sock.send(length)
-        client_sock.send(status)
+            self.client.send_length_to_socket(len(status),client_sock)
+
+        # Send response to client
+        self.client.send_to_socket(status,len(status),client_sock)
+
+        # Shutdown write end of socket
         client_sock.shutdown(SHUT_WR)
+        # Wait for end which will be received when the client closes the socket.
         end = client_sock.recv(_block)
+        # Close socket
         client_sock.close()
 
 
@@ -346,8 +361,8 @@ class MyDHTServer(CmdApp):
 
     def serve(self):
         """ Main server process
-            Contact `remote_server` if any to join existing ring
-            or create a new one.
+            Contact `remote_server` to join existing ring
+            or create a new one (if `remote_server` is None).
 
             Starts a new `server_thread` for new clients
         """

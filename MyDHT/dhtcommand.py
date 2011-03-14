@@ -1,3 +1,5 @@
+from time import time
+
 __author__ = 'Johan'
 _block = 4096
 
@@ -35,10 +37,12 @@ class DHTCommand():
      99: "UNKNOWN"}
     SEPARATOR="|"
 
-    def __init__(self,command=None,key=None,value=None):
+    def __init__(self,command=None,key=None,value=None,timestamp=None):
         """ Initialize a command with `key`, `command` and `value`
             if value is a file object read through it to get the size
             and then rewind it.
+            `timestamp` is seconds since epoch and it will be set
+            to current time if None.
         """
         if command is not None and command not in self.allcommand:
             raise Exception("Invalid command:",command)
@@ -46,6 +50,7 @@ class DHTCommand():
         self.key = str(key)
         self.value = value
         self.replicated = False
+        self.timestamp = timestamp or time()
         if isinstance(value,file):
             self.size = len(value.read())
             value.seek(0)
@@ -64,6 +69,7 @@ class DHTCommand():
             self.command = int(commands[1])
             self.key = commands[2]
             self.replicated = (commands[3] == "True")
+            self.timestamp = float(commands[4])
         else:
             self.command = self.UNKNOWN
         return self
@@ -74,7 +80,8 @@ class DHTCommand():
         message = str(self.size) + self.SEPARATOR + \
                   str(self.command) + self.SEPARATOR + \
                   (self.key or "") + self.SEPARATOR + \
-                  str(self.replicated) + self.SEPARATOR
+                  str(self.replicated) + self.SEPARATOR + \
+                  str(self.timestamp) + self.SEPARATOR
 
         # Add padding up to _block
         message = message + ("0"*(_block-len(message)))
