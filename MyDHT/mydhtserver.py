@@ -8,11 +8,10 @@ import thread
 import threading
 import traceback
 from HashRing import HashRing, Server
-from mydhttable import MyDHTTable
+from MyDHTTable import MyDHTTable
 from cmdapp import CmdApp
 from dhtcommand import DHTCommand
 from mydhtclient import MyDHTClient
-from cStringIO import StringIO
 
 _block = 4096
 
@@ -22,7 +21,7 @@ class MyDHTServer(CmdApp):
         """
         CmdApp.__init__(self)
         self.remote_server = None
-        self.dht_table = MyDHTTable()
+        self.dht_table = None
         self.client = MyDHTClient()
         self.ring_lock = threading.RLock()
         self.usage = \
@@ -75,10 +74,9 @@ class MyDHTServer(CmdApp):
         newserver = Server(host,port)
 
         # Add the new server to all existing nodes
-        for server in self.hash_ring.get_nodelist():
-            if self.this_server != server:
-                command = DHTCommand(DHTCommand.ADDNODE,newserver)
-                self.client.sendcommand(server,command)
+        command = DHTCommand(DHTCommand.ADDNODE,newserver)
+        self.forward_command(command)
+
         # Convert to a string list
         ring = map(lambda serv: str(serv),set(self.hash_ring.ring.values()))
         # Add new server to this ring
@@ -87,24 +85,21 @@ class MyDHTServer(CmdApp):
         self.ring_lock.release()
         return "|".join(ring)
 
-    def remove_node(self,node,replicated):
+    def remove_node(self,node,forwarded):
         """ Remove `node` from ring
-            If not `replicated` tell all other nodes
+            If not `forwarder` tell all other nodes
             This usually happens if a node dies without being
             able to do a decommission.
         """
         self.ring_lock.acquire()
         self.hash_ring.remove_node(node)
 
-        if not replicated:
-            # First remove this server from all other servers
+        if not forwarded:
             # Add the new server to all existing nodes
-            for server in self.hash_ring.get_nodelist():
-                if self.this_server != server:
-                    command = DHTCommand(DHTCommand.REMOVE,node)
-                    command.replicated = True
-                    self.client.sendcommand(server,command)
+            command = DHTCommand(DHTCommand.REMOVE,node)
+            self.forward_command(command)
 
+            # Rebalance all nodes
             rebalance_all_nodes()
 
         self.ring_lock.release()
@@ -118,29 +113,24 @@ class MyDHTServer(CmdApp):
         self.hash_ring.remove_node(self.this_server)
 
         # First remove this server from all other servers
-        # Add the new server to all existing nodes
-        for server in self.hash_ring.get_nodelist():
-            if self.this_server != server:
-                command = DHTCommand(DHTCommand.LEAVE,self.this_server)
-                self.client.sendcommand(server,command)
+        command = DHTCommand(DHTCommand.LEAVE,self.this_server)
+        self.forward_command(command)
+
         # Load balance only on this node
         self.load_balance(True)
         self.ring_lock.release()
 
-    def load_balance(self,replicated):
+    def load_balance(self,forwarded):
         """ Load balance this node and then all other.
-            if `replicated` is False BALANCE will be sent to
+            if `forwarded` is False BALANCE will be sent to
             all other nodes.
         """
         status = self.internal_load_balance()
 
-        if not replicated:
+        if not forwarded:
             # And load balance the others
-            for server in self.hash_ring.get_nodelist():
-                if self.this_server != server:
-                    command = DHTCommand(DHTCommand.BALANCE,server)
-                    command.replicated = True
-                    self.client.sendcommand(server,command)
+            command = DHTCommand(DHTCommand.BALANCE)            
+            self.forward_command(command)
 
         return status
     
@@ -174,21 +164,6 @@ class MyDHTServer(CmdApp):
                     self.debug(status)
         return "BALANCE ok"
 
-    def purge(self):
-        """ Go through all keys on this node and remove data
-            that don't belong here.
-
-            This could happen after a load balance where this
-            node has moved data to another new responsible server.
-        """
-        # For all keys in this map
-        for key in self.dht_table.get_keys():
-            key_is_at = self.hash_ring.get_replicas(key)
-            if self.this_server not in key_is_at:
-                # Remove from map
-                self.dht_table.perform(DHTCommand(DHTCommand.DEL,key))
-        return "PURGE ok"
-
     def forward_data(self,from_socket,to_socket,length):
         """ Forwards data from `from_socket` to `to_socket`
             by using select to wait.
@@ -205,7 +180,20 @@ class MyDHTServer(CmdApp):
             sent = to_socket.send(buf[:no_bytes])
             assert sent == no_bytes
 
-    def handle_replica_command(self,cmd,client_sock):
+    def forward_command(self,command):
+        """ Forwards `command` to all other servers except this
+            Sets command.forwarded to True so that the receiving
+            nodes does not forward the command.
+        """
+        if not command.forwarded:
+            command.forwarded = True
+            for server in self.hash_ring.get_nodelist():
+                if self.this_server != server:
+                    remote_status = self.client.sendcommand(server,copy.deepcopy(command))
+                    self.debug(remote_status)
+        return command
+
+    def handle_replica_command(self,command,client_sock):
         """ Handle `cmd` from `client_sock`
             If the key is found on this server it will be handled here
             or else it will be forwarded to the first server that is
@@ -215,8 +203,8 @@ class MyDHTServer(CmdApp):
             no other servers will be contacted.
         """
         # Find out where the key is found
-        key_is_at = self.hash_ring.get_replicas(cmd.key)
-        self.debug(cmd.key,"is at",str(key_is_at),"according to",str(self.hash_ring))
+        key_is_at = self.hash_ring.get_replicas(command.key)
+        self.debug(command.key,"is at",str(key_is_at),"according to",str(self.hash_ring))
 
         status = "UNKNOWN_ERROR"
 
@@ -229,17 +217,18 @@ class MyDHTServer(CmdApp):
 
         if local:
             # If the command is PUT, download the data before replicating
-            if cmd.command == DHTCommand.PUT:
-                cmd.value = self.client.read_from_socket(cmd.size,client_sock)
+            if command.action == DHTCommand.PUT:
+                command.value = self.client.read_from_socket(command.size,client_sock)
                 
-            status = self.dht_table.perform(cmd)
+            status = self.dht_table.perform(command)
             # Replicate data to other nodes if it was not a GET command
-            if not cmd.replicated:
-                cmd.replicated = True
-                if cmd.command != DHTCommand.GET:
+            if not command.forwarded:
+                command.forwarded = True
+                if command.action != DHTCommand.GET:
                     for server in key_is_at:
-                        remote_status = self.client.sendcommand(server,copy.deepcopy(cmd))
+                        remote_status = self.client.sendcommand(server,copy.deepcopy(command))
                         self.debug(remote_status)
+
         else:
             # Forward request to one of the servers responsible for the key
             # The responding server will take care of replication
@@ -251,10 +240,10 @@ class MyDHTServer(CmdApp):
                     sock.connect((server.bindaddress()))
 
                     # Send the command
-                    sock.send(cmd.getmessage())
+                    sock.send(command.getmessage())
 
                     # Forward data from incoming clientsock to sock
-                    self.forward_data(client_sock,sock,cmd.size)
+                    self.forward_data(client_sock,sock,command.size)
 
                     # Receive length of answer
                     length = self.client.read_length_from_socket(sock)
@@ -288,40 +277,37 @@ class MyDHTServer(CmdApp):
             `client_sock` is the socket where the client is connected
             perform the operation and connect to another server if necessary
         """
-        command = client_sock.recv(_block)
-        cmd = DHTCommand().parse(command)
+        rawcommand = client_sock.recv(_block)
+        command = DHTCommand().parse(rawcommand)
 
-        self.debug("received",str(cmd))
-        if cmd.command in [DHTCommand.PUT,DHTCommand.GET,DHTCommand.DEL]:
-            status = self.handle_replica_command(cmd,client_sock)
+        self.debug("received",str(command))
+        if command.action in [DHTCommand.PUT,DHTCommand.GET,DHTCommand.DEL]:
+            status = self.handle_replica_command(command,client_sock)
             # If the command was forwarded to another
             # server we have already closed the socket
-            if not cmd.replicated:
+            if not command.forwarded:
                 return
-        elif cmd.command == DHTCommand.JOIN:
+        elif command.action == DHTCommand.JOIN:
             # A client wants to join the ring
-            status = self.add_new_node(cmd.key)
-        elif cmd.command == DHTCommand.ADDNODE:
+            status = self.add_new_node(command.key)
+        elif command.action == DHTCommand.ADDNODE:
             # A new client has joined and should be added to this servers ring
-            self.hash_ring.add_node(cmd.key)
+            self.hash_ring.add_node(command.key)
             status = "added by "+str(self.this_server)
-        elif cmd.command == DHTCommand.LEAVE:
-            self.hash_ring.remove_node(cmd.key)
-            status = "removed: "+str(cmd.key)
-        elif cmd.command == DHTCommand.REMOVE:
+        elif command.action == DHTCommand.LEAVE:
+            self.hash_ring.remove_node(command.key)
+            status = "removed: "+str(command.key)
+        elif command.action == DHTCommand.REMOVE:
             # A server has left the ring without decommission
-            status = self.remove_node(cmd.key,cmd.replicated)
-        elif cmd.command == DHTCommand.WHEREIS:
+            status = self.remove_node(command.key,command.forwarded)
+        elif command.action == DHTCommand.WHEREIS:
             # Just return the hostname that holds a key
-            status = str(self.hash_ring.get_node(cmd.key))
-        elif cmd.command == DHTCommand.PURGE:
-            # Remove all data on this node that don't belong here
-            status = self.purge()
-        elif cmd.command == DHTCommand.BALANCE:
+            status = str(self.hash_ring.get_node(command.key))
+        elif command.action == DHTCommand.BALANCE:
             # Load balance this node
-            status = self.load_balance(cmd.replicated)
-        elif cmd.command == DHTCommand.UNKNOWN:
-            if command.startswith("GET /shutdown"):
+            status = self.load_balance(command.forwarded)
+        elif command.action == DHTCommand.UNKNOWN:
+            if rawcommand.startswith("GET /shutdown"):
                 self.decommission()
                 status = "SHUTDOWN ok"
             # Just send error and close socket
@@ -331,10 +317,10 @@ class MyDHTServer(CmdApp):
             return
         else:
             # All other commands ends up in the table
-            status = self.dht_table.perform(cmd)
+            status = self.dht_table.perform(command)
 
         # Send length to all clients except a web browser (it will end up in the HTML)
-        if cmd.command != DHTCommand.HTTPGET:
+        if command.action != DHTCommand.HTTPGET:
             self.client.send_length_to_socket(len(status),client_sock)
 
         # Send response to client
@@ -346,7 +332,6 @@ class MyDHTServer(CmdApp):
         end = client_sock.recv(_block)
         # Close socket
         client_sock.close()
-
 
     def signal_handler(self,signal,frame):
         """ Handle SIGINT by doing decommission.
@@ -388,8 +373,9 @@ class MyDHTServer(CmdApp):
         else:
             # First server so this server is added
             self.hash_ring = HashRing([self.this_server])
-        # Put the hash ring in the dht_table
-        self.dht_table.set_hash_ring(self.hash_ring)
+
+        # Initialize the hash map
+        self.dht_table =  MyDHTTable(self.this_server,self.hash_ring)
 
         self.debug("Starting server at",str(self.this_server))
         server_sock = socket(AF_INET,SOCK_STREAM)

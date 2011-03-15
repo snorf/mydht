@@ -11,7 +11,7 @@ class TestMyDHT(unittest.TestCase):
 
     def setUp(self):
         host = "localhost"
-        self.ports = [50140,50141,50142]
+        self.ports = range(50140,50141)
         self.servers = []
         for port in self.ports:
             self.servers.append(Server(host,port))

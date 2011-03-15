@@ -114,7 +114,7 @@ class MyDHTClient(CmdApp):
 
 
     def get_command(self, string):
-        for i,command in DHTCommand().allcommand.iteritems():
+        for i,command in DHTCommand().allcommands.iteritems():
             if command == string.upper():
                 return i
         else:
