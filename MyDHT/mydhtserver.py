@@ -30,6 +30,10 @@ class MyDHTServer(CmdApp):
              specify port (default: 50140)
            -h, --hostname
              specify hostname (default: localhost)
+           -s, --server
+             specify server to join existing ring
+           -r, --replicas
+             specify the number of replicas (only first server may specify replicas, 3 is default)
         """
 
     def cmdlinestart(self):
@@ -41,12 +45,14 @@ class MyDHTServer(CmdApp):
             host = self.getarg("-h") or self.getarg("--hostname","localhost")
             # Check if we should connect to existing ring
             remoteserver = self.getarg("-s") or self.getarg("-server")
+            replicas = self.getarg("-r") or self.getarg("--replicas", 3)
+            replicas = int(replicas)
             # Start the server
-            self.start(host,port,remoteserver)
+            self.start(host,port,replicas,remoteserver)
         except ValueError:
             self.help()
 
-    def start(self,host,port,remote_server=None,verbose=None,logfile=None,is_process=False):
+    def start(self,host,port,replicas,remote_server=None,verbose=None,logfile=None,is_process=False):
         """ Starts the server with `hostname`, `port`
             If `remove_server` is not None it will be contacted to join an existing ring
             `verbose` enables debug logging
@@ -56,6 +62,7 @@ class MyDHTServer(CmdApp):
         """
         self.this_server = Server(host,port)
         self.remote_server = remote_server
+        self.replicas = replicas
         self.is_process = is_process
         if verbose:
             self.verbose = True
@@ -66,7 +73,10 @@ class MyDHTServer(CmdApp):
 
     def add_new_node(self,new_node):
         """ Adds a new server to all existing nodes and
-            returns a |-separated list of the current ring.
+            returns a |-separated list of the current ring
+            ","  the number of replicas used.
+            Example:
+            localhost:50140|localhost:50141,3
         """
         self.ring_lock.acquire()
         self.debug("adding:",new_node)
@@ -83,7 +93,7 @@ class MyDHTServer(CmdApp):
         self.hash_ring.add_node(newserver)
         # Return |-separated list of nodes
         self.ring_lock.release()
-        return "|".join(ring)
+        return "|".join(ring)+","+str(self.hash_ring.replicas)
 
     def remove_node(self,node,forwarded):
         """ Remove `node` from ring
@@ -168,17 +178,21 @@ class MyDHTServer(CmdApp):
         """ Forwards data from `from_socket` to `to_socket`
             by using select to wait.
             `length` is the size.
+
+            At first i used:
+            buf = bytearray(_block)
+            length = from_socket.recv_into(buf, _block)
+            but this didn't work in Python 2.6 on Linux (Windows with 2.7 was fine).
         """
         done = 0
-        buf = bytearray(_block)
         while done < length:
             readable, writable, exceptional = select.select([from_socket],[to_socket],[])
             if not readable: select.select([from_socket],[],[])
             elif not writable: select.select([],[to_socket],[])
-            no_bytes = from_socket.recv_into(buf,_block)
-            done += no_bytes
-            sent = to_socket.send(buf[:no_bytes])
-            assert sent == no_bytes
+            buf = from_socket.recv(_block)
+            done += len(buf)
+            sent = to_socket.send(buf)
+            assert sent == len(buf)
 
     def forward_command(self,command):
         """ Forwards `command` to all other servers except this
@@ -365,14 +379,16 @@ class MyDHTServer(CmdApp):
             command = DHTCommand(DHTCommand.JOIN,self.this_server)
             ring = self.client.sendcommand(remote_server,command)
             self.debug("got ring from server:",str(ring))
+            # Get replicas
+            nodes,replicas = ring.split(",")
             # Convert |-separated list to Server-instances
-            nodes =  map(lambda server_string: Server(server_string.split(":")[0],server_string.split(":")[1]) ,ring.split("|"))
+            nodes =  map(lambda server_string: Server(server_string.split(":")[0],server_string.split(":")[1]) ,nodes.split("|"))
             # Initialize local hash ring
-            self.hash_ring = HashRing(nodes)
+            self.hash_ring = HashRing(nodes,int(replicas))
             self.hash_ring.add_node(self.this_server)
         else:
             # First server so this server is added
-            self.hash_ring = HashRing([self.this_server])
+            self.hash_ring = HashRing([self.this_server],self.replicas)
 
         # Initialize the hash map
         self.dht_table =  MyDHTTable(self.this_server,self.hash_ring)

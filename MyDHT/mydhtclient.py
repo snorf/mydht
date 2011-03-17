@@ -24,6 +24,10 @@ class MyDHTClient(CmdApp):
              put, get, del
            -k, --key
              specify key
+           -val, --value
+             specify a (string) value
+           -f, --file
+             specify a file value
         """
 
     def send_to_socket(self,data,size,socket):
@@ -100,11 +104,14 @@ class MyDHTClient(CmdApp):
                     self.send_to_socket(command.value,command.size,sock)
 
                 length = self.read_length_from_socket(sock)
-
+                self.debug("receiving a file with size ",length)
                 data = self.read_from_socket(length,sock,outstream)
 
                 sock.close()
-                return data
+                if len(data) < 1024:
+                    return data
+                else:
+                    return "Return data is over 1K, please use the -f option to redirect it to a file"
             except:
                 print "Error connecting to server:"
                 print '-'*60
@@ -127,17 +134,25 @@ class MyDHTClient(CmdApp):
             port = int( self.getarg("-p") or self.getarg("--port",50140))
             host = self.getarg("-h") or self.getarg("--hostname","localhost")
             key = self.getarg("-k") or self.getarg("--key")
-            outfile = self.getarg("-o") or self.getarg("--outfile")
             server = Server(host,port)
             command = self.getarg('-c') or self.getarg('--command')
             value = self.getarg("-val") or self.getarg("--value")
+            file = self.getarg("-f") or self.getarg("--file")
             self.debug("command:",\
             str(server),command,key,value)
-            if command is None or server is None:
+            if command is None or server is None or file and value:
                 self.help()
+                
             command = self.get_command(command)
             command = DHTCommand(command,key,value)
-            print self.sendcommand(server,command,outfile)
+
+            if file:
+                # File was an argument, supply it
+                with open(file, "wb") as outfile:
+                    self.sendcommand(server,command,outfile)
+            else:
+                # Print output
+                print self.sendcommand(server,command)
         except TypeError:
             self.help()
 

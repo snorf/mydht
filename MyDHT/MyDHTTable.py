@@ -121,7 +121,7 @@ class MyDHTTable():
             for key in self._map.keys():
                 if self.server_name not in self.hash_ring.get_replicas(key):
                     del self._map[key]
-            return "PURGE ok"
+            status = "PURGE ok"
         else:
             status = "BAD_COMMAND: "+str(command)
 

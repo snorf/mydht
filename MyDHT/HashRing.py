@@ -20,7 +20,7 @@ class Server():
         return self.host,self.port
 
 class HashRing(object):
-    def __init__(self, nodes=None, distribution_points=3, replicas=3):
+    def __init__(self, nodes=None, replicas=3, distribution_points=3):
         """Manages a hash ring.
 
         `nodes` is a list of objects that have a proper __str__ representation.
@@ -141,7 +141,7 @@ class HashRing(object):
         """ Given a string key returns the nodes as a set.
         """
         if not self.ring:
-            return None
+            return []
 
         nodelist = []
         for key in self._sorted_keys:
