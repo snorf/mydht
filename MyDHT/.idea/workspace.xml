@@ -2,13 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list id="e6a99f7c-8d86-49a3-927b-ae303682379e" name="Default" comment="" />
-    <list default="true" id="eb9bd9df-a80b-42a3-b9a6-778a7ae37b3a" name="New changelist" comment="Added hyperlinks&#10;">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/favicon.ico" />
+    <list default="true" id="eb9bd9df-a80b-42a3-b9a6-778a7ae37b3a" name="New changelist" comment="Remark about bootstrapping.">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/MyDHTTable.py" afterPath="$PROJECT_DIR$/MyDHTTable.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/README" afterPath="$PROJECT_DIR$/README" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/dhtcommand.py" afterPath="$PROJECT_DIR$/dhtcommand.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/mydhtserver.py" afterPath="$PROJECT_DIR$/mydhtserver.py" />
     </list>
     <ignored path="MyDHT.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -40,19 +36,19 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="MyDHTTable.py" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="MyDHTTable.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/MyDHTTable.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="80" column="40" selection-start="3236" selection-end="3236" vertical-scroll-proportion="0.7979452">
+            <state line="63" column="0" selection-start="2210" selection-end="2210" vertical-scroll-proportion="-7.08">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="README" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="README" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/README">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="157" column="76" selection-start="5829" selection-end="5829" vertical-scroll-proportion="-52.48">
+            <state line="342" column="0" selection-start="14576" selection-end="14576" vertical-scroll-proportion="0.8544521">
               <folding />
             </state>
           </provider>
@@ -145,8 +141,8 @@
         <option value="$PROJECT_DIR$/TestDownload.py" />
         <option value="$PROJECT_DIR$/mydhtserver.py" />
         <option value="$PROJECT_DIR$/dhtcommand.py" />
-        <option value="$PROJECT_DIR$/README" />
         <option value="$PROJECT_DIR$/MyDHTTable.py" />
+        <option value="$PROJECT_DIR$/README" />
       </list>
     </option>
   </component>
@@ -568,14 +564,14 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="1680" y="0" width="1680" height="1010" extended-state="0" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.20701754" sideWeight="0.0" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="true" content_ui="tabs" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="true" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.19488429" sideWeight="0.74385965" order="0" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.19488429" sideWeight="0.74385965" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.25614035" sideWeight="0.5146163" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.31578946" sideWeight="0.48051158" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32982457" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
@@ -603,7 +599,7 @@
     <option name="SHOW_ONLY_CHANGED_IN_SELECTION_DIFF" value="true" />
     <option name="CHECK_COMMIT_MESSAGE_SPELLING" value="true" />
     <option name="FORCE_NON_EMPTY_COMMENT" value="false" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixed print in cmdapp.py&#10;More info from mydhtclient.py&#10;More README.&#10;" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added hyperlinks to download keys from server, really nice.&#10;Added favicon.&#10;Updated README.&#10;Removed /shutdown, maybe I'll be adding all commands later." />
     <option name="MAKE_NEW_CHANGELIST_ACTIVE" value="true" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="false" />
     <option name="CHECK_FILES_UP_TO_DATE_BEFORE_COMMIT" value="false" />
@@ -635,6 +631,7 @@
     <MESSAGE value="Cleaned up test cases.&#10;Added README.&#10;Fixed some small bugs.&#10;The client is working now.&#10;Where is is returning all replicas." />
     <MESSAGE value="More README.&#10;Added info in HashRing.py about where I borrowed it." />
     <MESSAGE value="Fixed print in cmdapp.py&#10;More info from mydhtclient.py&#10;More README.&#10;" />
+    <MESSAGE value="Added hyperlinks to download keys from server, really nice.&#10;Added favicon.&#10;Updated README.&#10;Removed /shutdown, maybe I'll be adding all commands later." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -739,16 +736,16 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/README">
+    <entry file="file://$PROJECT_DIR$/MyDHTTable.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="157" column="76" selection-start="5829" selection-end="5829" vertical-scroll-proportion="-52.48">
+        <state line="63" column="0" selection-start="2210" selection-end="2210" vertical-scroll-proportion="-7.08">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/MyDHTTable.py">
+    <entry file="file://$PROJECT_DIR$/README">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="80" column="40" selection-start="3236" selection-end="3236" vertical-scroll-proportion="0.7979452">
+        <state line="342" column="0" selection-start="14576" selection-end="14576" vertical-scroll-proportion="0.8544521">
           <folding />
         </state>
       </provider>

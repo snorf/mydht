@@ -332,6 +332,11 @@
         Also it would be good to be able to add a node to a specific place in the ring (like in Apache
         Cassandra).
 
+        7.10 No bootstrapping for new nodes
+        -----------------------------------
+        When a new node is added to the network it is not able to get it to bootstrap itself and
+        downloading data. A load balance action has to be sent to any node.
+
     8. Summary
     ----------
     This was by far the most fun I have had in a long time. I've learned a lot of Python by doing this.
