@@ -1,5 +1,6 @@
 from cStringIO import StringIO
 import threading
+import urllib
 from HashRing import HashRing
 from dhtcommand import DHTCommand
 
@@ -49,7 +50,7 @@ class MyDHTTable():
 
     def gethtml(self):
         """ Generates a html representation of the map with
-            columns for key, size, hash and replicas.
+            columns for key, size, time, hash and replicas.
         """
         webpage = StringIO()
         webpage.write("<html>\n<head><title>DHT status page for " + str(self.server_name) + "</title>\n")
@@ -65,14 +66,14 @@ class MyDHTTable():
         size = 0
         for key in self._map.keys():
             webpage.write("<tr>\n")
-            webpage.write("<td>" + key + "</td>")
+            webpage.write("<td><a href=/"+ urllib.quote(key) + ">" + key + "</a></td>")
             size += len(self._map[key])
             webpage.write("<td>" + self.getsizewithsuffix(len(self._map[key])) + "</td>")
             webpage.write("<td>" + str(self._timemap.get(key)) + "</td>")
             webpage.write("<td>" + str(HashRing().gen_key(key)) + "</td>")
             webpage.write("<td>")
             for server in self.hash_ring.get_replicas(key):
-                webpage.write("<a href=http://"+str(server) + ">" + str(server) + "</a> ")
+                webpage.write("<a href=http://"+str(server) + "/" + urllib.quote(key) + ">" + str(server) + "</a> ")
             webpage.write("</td>")
             webpage.write("</tr>\n")
         webpage.write("</table>")
@@ -92,7 +93,7 @@ class MyDHTTable():
             self._timemap[command.key] = command.timestamp
             status = "PUT OK "+command.key
 
-        elif command.action == DHTCommand.GET:
+        elif command.action == DHTCommand.GET or command.action == DHTCommand.HTTPGETKEY:
             """ Get value from map if key exists """
             if command.key in self._map:
                 status = self._map[command.key]

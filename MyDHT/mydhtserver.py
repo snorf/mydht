@@ -321,9 +321,6 @@ class MyDHTServer(CmdApp):
             # Load balance this node
             status = self.load_balance(command.forwarded)
         elif command.action == DHTCommand.UNKNOWN:
-            if rawcommand.startswith("GET /shutdown"):
-                self.decommission()
-                status = "SHUTDOWN ok"
             # Just send error and close socket
             status = "UNKNOWN_COMMAND"
             client_sock.send(status)
@@ -334,7 +331,7 @@ class MyDHTServer(CmdApp):
             status = self.dht_table.perform(command)
 
         # Send length to all clients except a web browser (it will end up in the HTML)
-        if command.action != DHTCommand.HTTPGET:
+        if command.action != DHTCommand.HTTPGET and command.action != DHTCommand.HTTPGETKEY:
             self.client.send_length_to_socket(len(status),client_sock)
 
         # Send response to client

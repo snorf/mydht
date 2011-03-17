@@ -11,6 +11,13 @@
     A replication level can be set for the DHT (3 is default)
     where every key/value par will be stored in n different nodes.
 
+    Every node can be viewed with an ordinary web browser
+    (lynx did not work for me).
+
+    I have focused on implementing dynamic add and remove of nodes.
+    Load balancing and replication for increased protection against
+    a server failure.
+    
     2. Documentation
     -------------
 
@@ -19,7 +26,6 @@
 
     If anything is unclear the source code contains more specific comments
     about the implementation.
-
 
     3. Installation
     ------------
@@ -68,8 +74,12 @@
     This should give you a status page that shows that your ring consists
     of one node, has 0 keys and size is 0.
 
-        6.1 Adding more nodes
-        -----------------
+    This page is good for looking at the node status and it is also possible
+    to navigate to the other nodes via hyperlinks and also download the values
+    by clicking the links.
+
+        6.1 Adding (and removing) nodes
+        -------------------------------
         To add an additional node to the system run the following command:
 
         $ python mydhtserver.py -p 50141 -s localhost:50140
@@ -87,7 +97,10 @@
         Remember that the hostname and port must be reachable by the other nodes
         (ie using localhost will not work when nodes are on other machines).
 
-
+        To remove a node just hit CTRL-C if it is running in a terminal or else
+        just give it SIGINT (kill -2 PID). This will force the node to hand over
+        the keys and values to another node (if there is any) and then quit.
+        
         6.2 Running some test cases
         ----------------------------------
         To upload some data to the DHT you can either put a couple of file in the
@@ -139,8 +152,12 @@
         $  python mydhtclient.py -c del -k myfilekey
         > DEL OK myfilekey
 
-        To see that changes are reflected in the server use a web browser and
-        point it to any of the nodes.
+            6.3.1 Just for fun
+            ------------------
+            Since the web server is able to fetch keys from the key value store
+            it is possible to change the favicon.ico that the web browser keeps
+            asking for by doing this.
+            $ python mydhtclient.py -c put -k favicon.ico -f favicon.ico
 
         6.4 Other operations
         --------------------
@@ -306,6 +323,15 @@
         This should be fairly easy, just let all the nodes change their replicas value in HashRing.py and
         then do a load balance.
 
+        7.9 Distribution of keys
+        ------------------------
+        The distribution of keys is not even. Like stated in HashRing.py I borrowed it and changed it
+        to fit this system. I tried changing from MD5 to SHA1 but it was not better. In a real system
+        it would be good to have an even distribution.
 
-  8. Summary
-  ----------
+        Also it would be good to be able to add a node to a specific place in the ring (like in Apache
+        Cassandra).
+
+    8. Summary
+    ----------
+    This was by far the most fun I have had in a long time. I've learned a lot of Python by doing this.

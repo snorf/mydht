@@ -1,4 +1,5 @@
 from time import time
+import urllib
 
 __author__ = 'Johan'
 _block = 4096
@@ -16,6 +17,7 @@ class DHTCommand():
     WHEREIS = 10
     BALANCE = 11
     HTTPGET = 12
+    HTTPGETKEY = 13
     UNKNOWN = 99
     allcommands = \
     {1: "PUT",
@@ -30,6 +32,7 @@ class DHTCommand():
      10: "WHEREIS",
      11: "BALANCE",
      12: "HTTPGET",
+     13: "HTTPGETKEY",
      99: "UNKNOWN"}
     SEPARATOR=chr(30) # This is the ASCII 30-character aka record delimiter
 
@@ -66,6 +69,10 @@ class DHTCommand():
             self.key = commands[2]
             self.forwarded = (commands[3] == "True")
             self.timestamp = float(commands[4])
+        elif command.startswith("GET /"):
+            # Unquote the urlencoded key and remove the leading /
+            self.action = self.HTTPGETKEY
+            self.key = urllib.unquote(command.split(" ")[1])[1:]
         else:
             self.action = self.UNKNOWN
         return self
