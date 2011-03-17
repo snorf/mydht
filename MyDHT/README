@@ -1,253 +1,308 @@
 
                           MyDHT Distributed Hash Table
 
-  1. What is it?
-  -----------
+    1. What is it?
+    --------------
 
-  MyDHT is an implementation of a DHT written in Python.
-  It supports getting, setting and deleting key/values.
-  Values can be strings of files.
-  If at least 3 servers ar running then every key vill be
-  distributed to 3 different servers in case of a server failure.
+    MyDHT is an implementation of a DHT written in Python.
+    It supports getting, setting and deleting key/values.
+    Values can be strings of files.
 
-  
-  2. Documentation
-  -------------
+    A replication level can be set for the DHT (3 is default)
+    where every key/value par will be stored in n different nodes.
 
-  The source code is documented with PyDoc and for every source file
-  there is a html file with the generadet output.
-  The source code itself contains more comments.
+    2. Documentation
+    -------------
 
+    The source code is documented with PyDoc and for every source file
+    there is a html file with the generated output.
 
-  3. Installation
-  ------------
-
-  There is no installation of the system, 
-  just unpack the tar.gz-archive with:
-  
-  $ tar xf mydht.tar.gz
-
-  This will unpack all files in a directory called MyDHT.
-
-  4. Dependencies
-  ------------
-
-  MyDHT has been tested with python 2.6.? on Ubuntu Server 10.10,
-  Ubuntu 10.04 Desktop and Windows 7 x64.
-
-  5. Glossary
-  -----------
-  
-
-  6. Running
-  ----------
-
-  A MyDHT server (called server) is started from the command line in linux.
-  First go into the MyDHT directory where you extracted the files.
-
-  $ python mydhtserver.py
-
-  This will start a server on localhost running on port 50140.
-  Hostname and ports can be specified with -h and -p (or --host and --port).
-
-  To check that the node is running launch a webbrowser and point it to:
-  http://localhost:50140
-
-  This should give you a status page that shows that your server consists
-  of one server, has 0 keys and size is 0.
-
-    6.1 Adding more nodes
-	-----------------
-	To add an additional node to the system run the following command:
-	
-	$ python mydhtserver.py -p 50141 -s localhost:50140
-
-	The -p flag tells the server to run on port 50141 and -s (or --server)
-	tells the server to join an existing server.
-	The server at 50141 will contact the server at 50140 and ask to join.
-	50140 will return a list of servers that are already in this ring.
-
-	Check the webpage once again (on either http://localhost:50140 or 
-	http://localhost:50141) to see that it reports that the ring consists
-	of 2 servers.
-
-	This step should be repeated for every new server that should be added.
-	Remember that the hostname and port must be reachable by the other nodes
-	(ie using localhost will not work when nodes are on other machines).
+    If anything is unclear the source code contains more specific comments
+    about the implementation.
 
 
-	6.2 Running some test cases
-	----------------------------------
-	To upload some data to the DHT you can either put a couple of file in the
-	upload directory and then run the TestUpload.py test case.
-	This will iterate over all files in the directory and upload them with
-	the filename as the key. Also the filename will be uploaded as a string
-	value with the key "key for " + filename.
+    3. Installation
+    ------------
 
-	This is only intended as a quick way to put some data into the DHT.
+    There is no installation of the system,
+    just unpack the tar.gz-archive with:
 
-	After this is done point a web browser to any server and check that
-	all files are present. If there is fewer than 4 servers all files will
-	be present in all servers.
+    $ tar xf mydht.tar.gz
 
-	To try downloading the files run the TestDownload.py test case.
-	This will try to download all files in the upload directory and
-	save them to the download directory.
+    This will unpack all files in a directory called MyDHT.
+
+    4. Dependencies
+    ------------
+
+    MyDHT has been tested with python 2.6.? on Ubuntu Server 10.10,
+    Ubuntu 10.04 Desktop and Windows 7 x64.
+
+    If nodes are to be run on separate machines the hostname must
+    be set to such that the other nodes can reach it. Running on
+    localhost will not work.
+
+    5. Glossary
+    -----------
+    A brief explanation to some words used below.
+
+    ring      a ring refers to a hashring (HashRing.py) where all nodes
+            in the DHT gets a MD5 checksum based on hostname+port.
+
+    node      a node is a MyDHT server.
+
+    6. Running
+    ----------
+
+    A MyDHT server (sometimes called node) is started from the command
+    line in linux. First go into the MyDHT directory where you extracted
+    the files.
+
+    $ python mydhtserver.py
+
+    This will start a server on localhost running on port 50140.
+    Hostname and ports can be specified with -h and -p (or --host and --port).
+
+    To check that the node is running launch a webbrowser and point it to:
+    http://localhost:50140
+
+    This should give you a status page that shows that your ring consists
+    of one node, has 0 keys and size is 0.
+
+        6.1 Adding more nodes
+        -----------------
+        To add an additional node to the system run the following command:
+
+        $ python mydhtserver.py -p 50141 -s localhost:50140
+
+        The -p flag tells the server to run on port 50141 and -s (or --server)
+        tells the server to join an existing server.
+        The server at 50141 will contact the server at 50140 and ask to join.
+        50140 will return a list of servers that are already in this ring.
+
+        Check the webpage once again (on either http://localhost:50140 or
+        http://localhost:50141) to see that it reports that the ring consists
+        of 2 servers.
+
+        This step should be repeated for every new server that should be added.
+        Remember that the hostname and port must be reachable by the other nodes
+        (ie using localhost will not work when nodes are on other machines).
 
 
-	6.3 Interacting with the DHT
-	----------------------------
+        6.2 Running some test cases
+        ----------------------------------
+        To upload some data to the DHT you can either put a couple of file in the
+        upload directory and then run the TestUpload.py test case.
+        This will iterate over all files in the directory and upload them with
+        the filename as the key. Also the filename will be uploaded as a string
+        value with the key "key for " + filename.
 
-	If you would like to interact with the servers "for real" there is a
-	mydhtclient.py that should be used.
+        This is only intended as a quick way to put some data into the DHT.
 
-	To put a string value:
-	$ python mydhtclient.py -c put -k mykey -val myvalue
-	> PUT OK mykey
+        After this is done point a web browser to any server and check that
+        all files are present. If there is fewer than 4 servers all files will
+        be present in all servers.
 
-	This will set the value of "mykey" to "myvalue" at the server
-	localhost:50140. To use another server use -h/--host and -p/--port.
+        To try downloading the files run the TestDownload.py test case.
+        This will try to download all files in the upload directory and
+        save them to the download directory.
 
-	To put a file:
-	$ python mydhtclient.py -c put -k myfilekey -f myfile.bin
-	> PUT OK myfilekey
 
-	This will upload the file myfile.bin and save it at key "myfilekey"
+        6.3 Interacting with the DHT
+        ----------------------------
 
-	To get a value:
-	$ python mydhtclient.py -c get -k mykey
-	> myvalue
+        If you would like to interact with the servers "for real" there is a
+        mydhtclient.py that should be used.
 
-	To get a file:
-	$ python mydhtclient.py -c get -k myfilekey -o myfile.bin.download
-	No output will be shown but the files can be compared with diff:
-	$ diff myfile.bin myfile.bin.download
+        To put a string value:
+        $ python mydhtclient.py -c put -k mykey -val myvalue
+        > PUT OK mykey
 
-    To delete a value (string or file):
-    $  python mydhtclient.py -c del -k myfilekey
-    > DEL OK myfilekey
+        This will set the value of "mykey" to "myvalue" at the server
+        localhost:50140. To use another server use -h/--host and -p/--port.
 
-    To see that changes are reflected in the server use a web browser and
-    point it to any of the nodes.
+        To put a file:
+        $ python mydhtclient.py -c put -k myfilekey -f myfile.bin
+        > PUT OK myfilekey
 
-    6.4 Other operations
-    --------------------
-    Besides from get, put and del there are some more actions that can
-    be performed:
+        This will upload the file myfile.bin and save it at key "myfilekey"
 
-        6.4.1 Haskey
-        ------------
-        returns the timestamp of a value (or 0.0 if it is missing).
-        this action is mostly used between servers when they are load
-        balancing.
+        To get a value:
+        $ python mydhtclient.py -c get -k mykey
+        > myvalue
 
-        Example:
-                $ python mydhtclient.py -c haskey -k myfilekey
-                > 1300386351.67
+        To get a file:
+        $ python mydhtclient.py -c get -k myfilekey -o myfile.bin.download
+        No output will be shown but the files can be compared with diff:
+        $ diff myfile.bin myfile.bin.download
 
-        HASKEY = 4
+        To delete a value (string or file):
+        $  python mydhtclient.py -c del -k myfilekey
+        > DEL OK myfilekey
 
-        6.4.2 Purge
-        ------------
-        Purge is used to tell a node to throw away all keys that don't belong
-        on that node. This could be useful if new nodes have joined the network
-        and a load balancing operation have occured.
+        To see that changes are reflected in the server use a web browser and
+        point it to any of the nodes.
 
-        The key should be the server where the command should be sent.
+        6.4 Other operations
+        --------------------
+        Besides from get, put and del there are some more actions that can
+        be performed:
 
-        NOTE: Nodes will never remove keys unless they are told to.
+            6.4.1 Haskey
+            ------------
+            returns the timestamp of a value (or 0.0 if it is missing).
+            this action is mostly used between servers when they are load
+            balancing.
 
-        Example:
-        $ python mydhtclient.py -c purge
-        > PURGE ok
+            Example:
+                    $ python mydhtclient.py -c haskey -k myfilekey
+                    > 1300386351.67
 
-        6.4.3 Leave
-        -----------
-        This command is only used internally when a node wants to leave.
-        If you have started a node from the command line and press ctrl-C
-        (or kill it whit SIGINT) it will send the LEAVE action to all other
-        nodes.
+            HASKEY = 4
 
-        6.4.4 Remove
-        ------------
-        If a node left the ring without being able to send the leave message
-        the other nodes will continue to try to contact it. Remove is used to forcibly
-        remove a node from the ring.
+            6.4.2 Purge
+            ------------
+            Purge is used to tell a node to throw away all keys that don't belong
+            on that node. This could be useful if new nodes have joined the network
+            and a load balancing operation have occured.
 
-        When a node receives the remove action it will remove that server from its
-        own ring and tell all other servers. After that a load balance will occur
-        and it will be sent to all nodes.
+            The key should be the server where the command should be sent.
 
-        Example:
-        $ python mydhtclient.py -c remove -k localhost:50141
-        > REMOVE ok
+            NOTE: Nodes will never remove keys unless they are told to.
 
-        6.4.5 Join
-        ----------
-        This action is used by a server when it is started and joining an existing network.
+            Example:
+            $ python mydhtclient.py -c purge
+            > PURGE ok
 
-        6.4.6 Addnode
-        -------------
-        This is an internal action sent to all other nodes when a node has joined the network.
+            6.4.3 Leave
+            -----------
+            This command is only used internally when a node wants to leave.
+            If you have started a node from the command line and press ctrl-C
+            (or kill it whit SIGINT) it will send the LEAVE action to all other
+            nodes.
 
-        6.4.7 Whereis
-        -------------
-        Whereis tells you at which nodes a key is stored.
+            6.4.4 Remove
+            ------------
+            If a node left the ring without being able to send the leave message
+            the other nodes will continue to try to contact it. Remove is used to forcibly
+            remove a node from the ring.
 
-        Example:
-        $ python mydhtclient.py -c whereis -k mykey
-        > localhost:50142, localhost:50140, localhost:50143
+            When a node receives the remove action it will remove that server from its
+            own ring and tell all other servers. After that a load balance will occur
+            and it will be sent to all nodes.
 
-        NOTE: Whereis will only tell where the values should be but not if they're
-              actually there. To do this haskey may be used.
+            Example:
+            $ python mydhtclient.py -c remove -k localhost:50141
+            > REMOVE ok
 
-        6.4.8 Balance
-        -------------
-        Balance will tell the first node to go through its keys.
-        For every key it will ask every server where the key should be (according to the ring)
-        if they have it.
+            6.4.5 Join
+            ----------
+            This action is used by a server when it is started and joining an existing network.
 
-        If the other node has the key but it's older it will be transferred to that node.
+            6.4.6 Addnode
+            -------------
+            This is an internal action sent to all other nodes when a node has joined the network.
 
-        If the other node has a newer version of the key it will be transferred to the first node.
+            6.4.7 Whereis
+            -------------
+            Whereis tells you at which nodes a key is stored.
 
-        If they have the same timestamp nothing will happen.
+            Example:
+            $ python mydhtclient.py -c whereis -k mykey
+            > localhost:50142, localhost:50140, localhost:50143
 
-        After this the balance action will be forwarded to all other nodes and they will do the same thing.
+            NOTE: Whereis will only tell where the values should be but not if they're
+                  actually there. To do this haskey may be used.
+
+            6.4.8 Balance
+            -------------
+            Balance will tell the first node to go through its keys.
+            For every key it will ask every server where the key should be (according to the ring)
+            if they have it.
+
+            If the other node has the key but it's older it will be transferred to that node.
+
+            If the other node has a newer version of the key it will be transferred to the first node.
+
+            If they have the same timestamp nothing will happen.
+
+            After this the balance action will be forwarded to all other nodes and they will do the same thing.
+
+    7. Limitations
+    --------------
+
+        7.1 Only in memory storage
+        --------------------------
+        Right now all keys and values are stored in a Python dictionary. This will probably not be suitable
+        for production use. I thought about moving values to disk after they reached a certain age but left
+        it out. Maybe it would be good to write the values to disk all the time and have the dictionary for
+        fast access.
         
+        This would make it possible for a node to be restarted after a crash and still have some or all values.
+        The keys must be written to disk for this to work but it should not be that hard.
 
-  Licensing
-  ---------
+        Another thing about storing in memory is that at some point a limit will be reached and the os will
+        not give Python more memory. I have tried to upload about 1 GB of data in the network and it was no
+        problem but I guess if you multiply that by a factor of 10 something will go bad.
 
-  Please see the file called LICENSE.
+        7.2 No gossiping
+        ----------------
+        The nodes are not that social, they will not perform any smalltalk where they can discover errors.
+        For example it is possible that 7 of 8 nodes have a HashRing with 8 servers but the last one only
+        has 7. This will not be good since the last node have another opinion about where to put the keys
+        and values.
+
+        By looking at the web page for each node this could be discovered and the faulty node could be
+        restarted.
+
+        Also it would be good to have a timestamp on the hashring itself, this would make it easier to
+        find and correct errors.
+
+        7.3 Overhead in communication
+        -----------------------------
+        The nodes communicate mostly with messages of type DHTCommand. This is a homemade protocol that
+        introduces some overhead. It would be good to replace this protocol with Google Protocol Buffers
+        or Thrift.
+
+        Also there are some unnecessary overhead when load balancing. Between the first load balancing
+        node and other nodes holding the same keys there will be double checks for all values.
+
+        7.4 No removal of presumably dead nodes
+        ---------------------------------------
+        If a node tries to contact a node that has crashed it will fail and continue with the next node
+        that holds the same key if there is any.
+
+        The MyDHTClient class that does most of the communication will try 3 times before giving up.
+
+        7.5 Error handling
+        ------------------
+        I have tried to take care of most of the error that I have found during development but I am
+        sure that there are things that I've missed. Also I have used "except:" without an exception
+        in some places and this is not really good.
+
+        7.6 Windows/Linux compability
+        -----------------------------
+        The system runs on Linux and Windows and you can use nodes from both worlds but it is not possible
+        to write a file from Windows and read it from Linux. Or at least I have not been able to do this.
+
+        7.7 Every node holds the full ring
+        ----------------------------------
+        This is not a real limitation in smaller networks but if you plan to use a lot of nodes it is not
+        the best thing to have them to "multicast" everything to all other nodes.
+        In this case every node should instead know the next couple of nodes and when a key is not found on
+        one node it will be redirected through the ring eventually ending up in the right place.
+
+        A good thing with the existing approach is that at most 1 hop will be needed to reach the correct node.
+
+        7.8 Replication could be even better
+        ------------------------------------
+        If a put is sent to a node where a key should not be it will be forwarded to one of the replica nodes.
+        That replica node will perform the replication to the other nodes after it has downloaded the data.
+        A nicer way to do this would be to replicate to all node from the first node, reading from the socket
+        and writing to the replica nodes sockets all at the same time.
+
+        I tried to do this but the code did not turn out well so I reverted back to this simple solution.
 
 
-  Contacts
-  --------
-
-     o If you want to be informed about new code releases, bug fixes,
-       security fixes, general news and information about the Apache server
-       subscribe to the apache-announce mailing list as described under
-       <http://httpd.apache.org/lists.html#http-announce>
-
-     o If you want freely available support for running Apache please join the
-       Apache user community by subscribing to Users Mailing List at
-       <http://httpd.apache.org/userslist.html> or one of the following
-       USENET newsgroups:
-         comp.infosystems.www.servers.unix
-         comp.infosystems.www.servers.ms-windows
-       Also available at: 
-         <http://groups.google.com/groups?group=comp.infosystems.www.servers>
-
-     o If you want commercial support for running Apache please contact
-       one of the companies and contractors which are listed at
-       <http://www.apache.org/info/support.cgi>
-
-     o If you have a concrete bug report for Apache please go to the
-       Apache Group Bug Database and submit your report:
-       <http://httpd.apache.org/bug_report.html>
-
-     o If you want to participate in actively developing Apache please
-       subscribe to the `dev@httpd.apache.org' mailing list as described at
-       <http://httpd.apache.org/lists.html#http-dev>
+  8. Summary
+  ----------
 

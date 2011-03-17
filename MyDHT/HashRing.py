@@ -1,4 +1,5 @@
 import hashlib
+__author__ = 'http://amix.dk/blog/post/19367'
 
 class Server():
     """ Conveience class that holds a host and a port
@@ -26,6 +27,10 @@ class HashRing(object):
         `nodes` is a list of objects that have a proper __str__ representation.
         `distribution_points` indicates how many virtual points should be used pr. node,
         distribution_points are required to improve the distribution.
+
+        I, Johan, Borrowed this code from:
+        http://amix.dk/blog/post/19367
+        and changed it to fit my needs.
         """
         self.distribution_points = distribution_points
         self.replicas = replicas
