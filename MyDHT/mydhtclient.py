@@ -21,7 +21,7 @@ class MyDHTClient(CmdApp):
            -p, --port
              specify port (default: 50140)
            -c, --command
-             put, get, del
+             put, get, del, haskey, purge, remove, whereis, balance
            -k, --key
              specify key
            -val, --value

@@ -302,7 +302,10 @@
 
         I tried to do this but the code did not turn out well so I reverted back to this simple solution.
 
+        Maybe there should be a way of changing the number of replica nodes after the ring has been started.
+        This should be fairly easy, just let all the nodes change their replicas value in HashRing.py and
+        then do a load balance.
+
 
   8. Summary
   ----------
-

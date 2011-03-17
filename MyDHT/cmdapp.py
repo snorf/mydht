@@ -21,6 +21,8 @@ class CmdApp:
         self.usage = "extended in subclass"
 
     def __del__(self):
+        """ Restore stdout and stdin
+        """
         sys.stdin, sys.stdout = self.streams
 
     def getenv(self,name,default=None):
@@ -54,6 +56,8 @@ class CmdApp:
             return default
 
     def help(self):
+        """ Print help text from implementing classes and this class.
+        """
         print "Usage:",self.name,"[options]",self.usage,
         print """  -v
              verbose mode
@@ -63,5 +67,7 @@ class CmdApp:
     def now(self): return time.ctime(time.time())
 
     def debug(self,*message):
+        """ Print ``message` if `self.verbose`
+        """
         if self.verbose:
-            print "["+self.now()+"]:",message
+            print "["+self.now()+"]:", " ".join(map(lambda msg: str(msg), message))

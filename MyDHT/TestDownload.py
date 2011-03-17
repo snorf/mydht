@@ -19,8 +19,8 @@ class TestMyDHT(unittest.TestCase):
         self.dht.verbose = True
 
     def testDownloadFiles(self):
-        """ Open files in testfiles/ in binary mode
-            and send them to dht
+        """ For every file in upload/ download them
+            from DHT to download/
         """
         for i,file in enumerate(glob.glob("upload/*")):
             with open(file.replace("upload","download") + ".downloaded", "wb") as f:

@@ -19,7 +19,7 @@ class TestMyDHT(unittest.TestCase):
         self.dht.verbose = True
 
     def testUploadFiles(self):
-        """ Open files in testfiles/ in binary mode
+        """ Open files in upload/ in binary mode
             and send them to dht
         """
         for i,file in enumerate(glob.glob("upload/*")):

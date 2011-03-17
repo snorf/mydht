@@ -48,7 +48,7 @@ class MyDHTServer(CmdApp):
             replicas = self.getarg("-r") or self.getarg("--replicas", 3)
             replicas = int(replicas)
             # Start the server
-            self.start(host,port,replicas,remoteserver)
+            self.start(host=host,port=port,replicas=replicas,remote_server=remoteserver)
         except ValueError:
             self.help()
 
