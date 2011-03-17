@@ -138,21 +138,30 @@ class MyDHTClient(CmdApp):
             command = self.getarg('-c') or self.getarg('--command')
             value = self.getarg("-val") or self.getarg("--value")
             file = self.getarg("-f") or self.getarg("--file")
+            outfile = self.getarg("-o") or self.getarg("--outfile")
+
             self.debug("command:",\
             str(server),command,key,value)
             if command is None or server is None or file and value:
                 self.help()
                 
             command = self.get_command(command)
-            command = DHTCommand(command,key,value)
-
             if file:
+                f = open(file, "rb")
+                command = DHTCommand(command,key,f)
+            else:
+                command = DHTCommand(command,key,value)
+
+            if outfile:
                 # File was an argument, supply it
-                with open(file, "wb") as outfile:
-                    self.sendcommand(server,command,outfile)
+                with open(outfile, "wb") as out:
+                    print self.sendcommand(server,command,out)
             else:
                 # Print output
                 print self.sendcommand(server,command)
+
+            if file:
+                f.close()
         except TypeError:
             self.help()
 

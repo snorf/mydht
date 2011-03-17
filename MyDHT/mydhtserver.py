@@ -110,7 +110,7 @@ class MyDHTServer(CmdApp):
             self.forward_command(command)
 
             # Rebalance all nodes
-            rebalance_all_nodes()
+            self.load_balance(False)
 
         self.ring_lock.release()
         return "REMOVE ok"
@@ -315,8 +315,8 @@ class MyDHTServer(CmdApp):
             # A server has left the ring without decommission
             status = self.remove_node(command.key,command.forwarded)
         elif command.action == DHTCommand.WHEREIS:
-            # Just return the hostname that holds a key
-            status = str(self.hash_ring.get_node(command.key))
+            # Just return the hostnames that holds a key
+            status = ", ".join(map(lambda s: str(s), self.hash_ring.get_replicas(command.key)))
         elif command.action == DHTCommand.BALANCE:
             # Load balance this node
             status = self.load_balance(command.forwarded)

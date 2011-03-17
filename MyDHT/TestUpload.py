@@ -11,20 +11,18 @@ class TestMyDHT(unittest.TestCase):
 
     def setUp(self):
         host = "localhost"
-        self.ports = range(50140,50141)
+        self.ports = [50140]#range(50141,50144)
         self.servers = []
         for port in self.ports:
             self.servers.append(Server(host,port))
         self.dht = MyDHTClient()
         self.dht.verbose = True
 
-    def test_1_UploadFiles(self):
+    def testUploadFiles(self):
         """ Open files in testfiles/ in binary mode
             and send them to dht
         """
-        for i,file in enumerate(glob.glob("testfiles/*")):
-            if file.endswith(".downloaded"):
-                continue
+        for i,file in enumerate(glob.glob("upload/*")):
             with open(file, "rb") as f:
                 command = DHTCommand(DHTCommand.PUT,file,f)
                 response = self.dht.sendcommand(self.servers[i % len(self.ports)],command)
@@ -32,20 +30,5 @@ class TestMyDHT(unittest.TestCase):
             command = DHTCommand(DHTCommand.PUT,"key for:"+file,"this is the key for:"+file)
             response = self.dht.sendcommand(self.servers[i % len(self.ports)],command)
 
-    def test_2_DownloadFiles(self):
-        """ Open files in testfiles/ in binary mode
-            and send them to dht
-        """
-        for i,file in enumerate(glob.glob("testfiles/*")):
-            if file.endswith(".downloaded"):
-                continue
-            with open(file + ".downloaded", "wb") as f:
-                command = DHTCommand(DHTCommand.GET,file)
-                self.dht.sendcommand(self.servers[i % len(self.ports)],command,f)
-            command = DHTCommand(DHTCommand.GET,"key for:"+file)
-            print self.dht.sendcommand(self.servers[i % len(self.ports)],command)
-        self.assertTrue(True)
-
-    def test_3_just_for_fun(self):
-        self.assertTrue(True)
-        
+if __name__ == '__main__':
+    unittest.main()

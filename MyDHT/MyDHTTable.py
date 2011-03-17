@@ -52,13 +52,14 @@ class MyDHTTable():
             columns for key, size, hash and replicas.
         """
         webpage = StringIO()
-        webpage.write("<html>\n<head>DHT status page<br />\n")
-        webpage.write("</head>\n<body>\n")
+        webpage.write("<html>\n<head><title>DHT status page for " + str(self.server_name) + "</title>\n")
+        webpage.write("</head>\n<body>\nDHT status page for " + str(self.server_name) + "<br />")
         webpage.write("key count: " + str(len(self._map)) + "</br>")
         webpage.write("Ring is: ")
         for server in self.hash_ring.get_nodelist():
             webpage.write("<a href=http://"+str(server) + ">" + str(server) + "</a> ")
         webpage.write("</br>")
+        webpage.write("Number of replicas: " + str(self.hash_ring.replicas) + "<br /><br />")
 
         webpage.write("<table border=\"1\">\n<tr>\n<td>key</td>\n<td>size</td>\n<td>time</td>\n<td>hash</td>\n<td>replicas</td></tr>\n")
         size = 0
