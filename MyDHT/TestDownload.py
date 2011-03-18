@@ -23,7 +23,7 @@ class TestMyDHT(unittest.TestCase):
             from DHT to download/
         """
         for i,file in enumerate(glob.glob("upload/*")):
-            with open(file.replace("upload","download") + ".downloaded", "wb") as f:
+            with open(file.replace("upload","download"), "wb") as f:
                 command = DHTCommand(DHTCommand.GET,file)
                 self.dht.sendcommand(self.servers[i % len(self.ports)],command,f)
             command = DHTCommand(DHTCommand.GET,"key for:"+file)
