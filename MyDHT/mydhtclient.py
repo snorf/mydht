@@ -114,6 +114,8 @@ class MyDHTClient(CmdApp):
             except socket_error:
                 errno, errstr = sys.exc_info()[:2]
                 logging.error("Error connecting to server: %s", errstr)
+
+        logging.error("Server (%s) did not respond during 3 tries, giving up", str(server))
         return None
 
 
@@ -155,9 +157,9 @@ class MyDHTClient(CmdApp):
             else:
                 # Print output
                 data = self.sendcommand(server,command)
-                if len(data) < 1024:
+                if data and len(data) < 1024:
                     print data
-                else:
+                elif data:
                     print "Return data is over 1K, please use the -o option to redirect it to a file"
             if file:
                 f.close()
