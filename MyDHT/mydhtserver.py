@@ -150,6 +150,10 @@ class MyDHTServer(CmdApp):
             for server in key_is_at:
                 command = DHTCommand(DHTCommand.HASKEY,key)
                 status = self.client.sendcommand(server,command)
+                if not status:
+                    # None was returned, servers is probably down
+                    logging.error("Got no timestamp from %s, could be dead", str(server))
+                    continue
                 remote_time = float(status)
                 local_timestamp = float(self.dht_table.perform(command))
                 if remote_time < local_timestamp:
