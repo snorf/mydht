@@ -58,7 +58,7 @@ class MyDHTClient(CmdApp):
         received = 0
         data = StringIO()
         while received < size:
-            incoming = socket.recv(_block)
+            incoming = socket.recv(size - received)
             if not incoming: break
             received += len(incoming)
             if isinstance(outstream,file):
@@ -73,14 +73,14 @@ class MyDHTClient(CmdApp):
         """
         length = str(length) + "|"
         length = length + ("0"*(_block-len(length)))
-        socket.send(length)
+        self.send_to_socket(length,_block,socket)
 
     def read_length_from_socket(self,socket):
         """ Read the length packet from a socket.
             The packet is length + | + zero padding.
             return it as an int.
         """
-        length = socket.recv(_block)
+        length = self.read_from_socket(_block,socket)
         length = int(length.split("|")[0])
         return length
 
