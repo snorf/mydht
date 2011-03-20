@@ -56,9 +56,9 @@ class MyDHTTable():
         webpage.write("<html>\n<head><title>DHT status page for " + str(self.server_name) + "</title>\n")
         webpage.write("</head>\n<body>\nDHT status page for " + str(self.server_name) + "<br />")
         webpage.write("key count: " + str(len(self._map)) + "</br>")
-        webpage.write("Ring is: ")
+        webpage.write("Ring is:<br />")
         for server in self.hash_ring.get_nodelist():
-            webpage.write("<a href=http://"+str(server) + ">" + str(server) + "</a> ")
+            webpage.write("<a href=http://"+str(server) + ">" + str(server) + "</a><br />")
         webpage.write("</br>")
         webpage.write("Number of replicas: " + str(self.hash_ring.replicas) + "<br /><br />")
 

@@ -2,6 +2,7 @@ import copy
 import select
 import signal
 from socket import *
+from socket import error as socket_error
 import sys
 import os
 import thread
@@ -34,6 +35,8 @@ class MyDHTServer(CmdApp):
              specify server to join existing ring
            -r, --replicas
              specify the number of replicas (only first server may specify replicas, 3 is default)
+           -l, --logfile
+             specify a logfile
         """
 
     def cmdlinestart(self):
@@ -47,8 +50,9 @@ class MyDHTServer(CmdApp):
             remoteserver = self.getarg("-s") or self.getarg("-server")
             replicas = self.getarg("-r") or self.getarg("--replicas", 3)
             replicas = int(replicas)
+            logfile = self.getarg("-l") or self.getarg("--logfile")
             # Start the server
-            self.start(host=host,port=port,replicas=replicas,remote_server=remoteserver)
+            self.start(host=host,port=port,replicas=replicas,remote_server=remoteserver,logfile=logfile)
         except ValueError:
             self.help()
 
@@ -218,7 +222,7 @@ class MyDHTServer(CmdApp):
         """
         # Find out where the key is found
         key_is_at = self.hash_ring.get_replicas(command.key)
-        self.debug(command.key,"is at",str(key_is_at),"according to",str(self.hash_ring))
+        self.debug(command.key,"is at"," ".join(map(lambda msg: str(msg), key_is_at)),"according to",str(self.hash_ring))
 
         status = "UNKNOWN_ERROR"
 
@@ -275,11 +279,9 @@ class MyDHTServer(CmdApp):
                     end = client_sock.recv(_block)
                     client_sock.close()
                     break
-                except Exception, e:
-                    print "Error relaying to server: ", server
-                    print '-'*60
-                    traceback.print_exc()
-                    print '-'*60
+                except socket_error:
+                    errno, errstr = sys.exc_info()[:2]
+                    print "Error relaying to/from server: ", server, errstr
             else:
                 self.debug("No nodes were found")
                 status = "No nodes where found"
@@ -356,19 +358,12 @@ class MyDHTServer(CmdApp):
             # Exit hard if standalone
             sys.exit(0)
 
-    def serve(self):
-        """ Main server process
-            Contact `remote_server` to join existing ring
-            or create a new one (if `remote_server` is None).
-
-            Starts a new `server_thread` for new clients
+    def initialise_hashring(self):
+        """ Initialize the hash ring.
+            If `self.remote_server` is not note, get it from remote_server
+            or else just create a new one.
+            Also set the hash_ring in `self.dht_table`
         """
-        if not self.this_server:
-            self.help()
-
-        # Register SIGINT handler
-        signal.signal(signal.SIGINT, self.signal_handler)
-
         if self.remote_server:
             remote_host, remote_port = self.remote_server.split(":")
             remote_server = Server(remote_host,remote_port)
@@ -390,17 +385,33 @@ class MyDHTServer(CmdApp):
         # Initialize the hash map
         self.dht_table =  MyDHTTable(self.this_server,self.hash_ring)
 
+    def serve(self):
+        """ Main server process
+            Starts a new `server_thread` for new clients
+        """
+        if not self.this_server:
+            self.help()
+
+        # Register SIGINT handler
+        signal.signal(signal.SIGINT, self.signal_handler)
+
         self.debug("Starting server at",str(self.this_server))
         server_sock = socket(AF_INET,SOCK_STREAM)
         try:
             server_sock.bind((self.this_server.bindaddress()))
             server_sock.listen(5)
+
+            # Get hash ring, we want to do this after we know that
+            # the socket was free
+            self.initialise_hashring()
+
             while 1:
                 client_sock, client_addr = server_sock.accept()
                 #self.debug("Server connected by", clientaddr)
                 thread.start_new_thread(self.server_thread, (client_sock,))
-        except error, msg:
-            print "Unable to bind to socket: ",msg
+        except socket_error:
+            errno, errstr = sys.exc_info()[:2]
+            print "Unable to bind to socket: ",errstr
 
 if __name__ == "__main__":
     MyDHTServer().cmdlinestart()

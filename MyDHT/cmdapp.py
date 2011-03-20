@@ -71,3 +71,4 @@ class CmdApp:
         """
         if self.verbose:
             print "["+self.now()+"]:", " ".join(map(lambda msg: str(msg), message))
+            sys.stdout.flush()

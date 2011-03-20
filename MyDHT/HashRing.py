@@ -104,8 +104,9 @@ class HashRing(object):
             The replica nodes is just 3 consecutive nodes at the moment
         """
 
+        # Return empty list if empty ring
         if not self.ring:
-            return None
+            return []
 
         nodelist = []
 

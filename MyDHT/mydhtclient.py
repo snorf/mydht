@@ -1,4 +1,5 @@
 from _socket import *
+from socket import error as socket_error
 import sys
 import traceback
 from HashRing import Server
@@ -108,15 +109,10 @@ class MyDHTClient(CmdApp):
                 data = self.read_from_socket(length,sock,outstream)
 
                 sock.close()
-                if len(data) < 1024:
-                    return data
-                else:
-                    return "Return data is over 1K, please use the -f option to redirect it to a file"
-            except:
-                print "Error connecting to server:"
-                print '-'*60
-                traceback.print_exc()
-                print '-'*60
+                return data
+            except socket_error:
+                errno, errstr = sys.exc_info()[:2]
+                print "Error connecting to server:", errstr
         return None
 
 
@@ -158,8 +154,11 @@ class MyDHTClient(CmdApp):
                     print self.sendcommand(server,command,out)
             else:
                 # Print output
-                print self.sendcommand(server,command)
-
+                data = self.sendcommand(server,command)
+                if len(data) < 1024:
+                    print data
+                else:
+                    print "Return data is over 1K, please use the -o option to redirect it to a file"
             if file:
                 f.close()
         except TypeError:

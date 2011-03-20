@@ -337,6 +337,11 @@
         When a new node is added to the network it is not able to get it to bootstrap itself and
         downloading data. A load balance action has to be sent to any node.
 
+        7.11 The web interface
+        ----------------------
+        I know that most DHT's don't have a web interface, I built it for debugging purposes and left it
+        because I think it is useful when reviewing this assignment.
+
     8. Summary
     ----------
     This was by far the most fun I have had in a long time. I've learned a lot of Python by doing this.
