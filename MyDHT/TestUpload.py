@@ -11,12 +11,11 @@ class TestMyDHT(unittest.TestCase):
 
     def setUp(self):
         host = "localhost"
-        self.ports = [50140]#range(50141,50144)
+        self.ports = [50140] #range(50140,50144)
         self.servers = []
         for port in self.ports:
             self.servers.append(Server(host,port))
-        self.dht = MyDHTClient()
-        self.dht.verbose = True
+        self.dht = MyDHTClient(True)
 
     def testUploadFiles(self):
         """ Open files in upload/ in binary mode

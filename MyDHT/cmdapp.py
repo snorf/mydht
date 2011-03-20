@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import time
@@ -9,15 +10,23 @@ class CmdApp:
     saves sys.argv, os.environ and if the user wants verbose output.
     getenv, getopt and getarg may be used to get command line parameters.
     """
-    def __init__(self,name=None):
+    def __init__(self,name=None,verbose=False,logfile=None):
         self.name = name or self.__class__.__name__
         self.args = sys.argv[1:]
         self.env = os.environ
-        self.verbose = self.getopt('-v') or self.getenv('VERBOSE')
+        self.verbose = self.getopt('-v') or self.getenv('VERBOSE') or verbose
         self.streams = sys.stdin, sys.stdout
-        logfile = self.getarg("-l") or self.getarg("--logfile")
-        if logfile:
-            sys.stdout = open(logfile,"w")
+        logfile = self.getarg("-l") or self.getarg("--logfile") or logfile
+        if self.verbose:
+            if logfile:
+                logging.basicConfig(level=logging.DEBUG,
+                                    format='%(asctime)s %(levelname)s %(message)s',
+                                    filename=logfile,
+                                    filemode='w')
+            else:
+                logging.basicConfig(level=logging.DEBUG,
+                                    format='%(asctime)s %(levelname)s %(message)s')
+
         self.usage = "extended in subclass"
 
     def __del__(self):
@@ -61,14 +70,7 @@ class CmdApp:
         print "Usage:",self.name,"[options]",self.usage,
         print """  -v
              verbose mode
+                    -l, --logfile
+             specify a logfile
         """
         sys.exit(1)
-
-    def now(self): return time.ctime(time.time())
-
-    def debug(self,*message):
-        """ Print ``message` if `self.verbose`
-        """
-        if self.verbose:
-            print "["+self.now()+"]:", " ".join(map(lambda msg: str(msg), message))
-            sys.stdout.flush()

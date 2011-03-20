@@ -1,4 +1,5 @@
 from _socket import *
+import logging
 from socket import error as socket_error
 import sys
 import traceback
@@ -11,10 +12,10 @@ __author__ = 'Johan'
 _block = 4096
 
 class MyDHTClient(CmdApp):
-    def __init__(self):
+    def __init__(self,verbose=False,logfile=None):
         """A MyDHT client for interacting with MyDHT servers
         """
-        CmdApp.__init__(self)
+        CmdApp.__init__(self,verbose=verbose,logfile=logfile)
         self.usage = \
         """
            -h, --hostname
@@ -92,7 +93,7 @@ class MyDHTClient(CmdApp):
         # If command isn't already a DHTCommand, create one
 
         for retry in range(3):
-            self.debug("sending command to:", str(server), str(command),"try number",retry)
+            logging.debug("sending command to: %s %s try number: %d", str(server), str(command), retry)
             sock = socket(AF_INET, SOCK_STREAM)
 
             try:
@@ -105,14 +106,14 @@ class MyDHTClient(CmdApp):
                     self.send_to_socket(command.value,command.size,sock)
 
                 length = self.read_length_from_socket(sock)
-                self.debug("receiving a file with size ",length)
+                #logging.debug("receiving a file with size %d", length)
                 data = self.read_from_socket(length,sock,outstream)
 
                 sock.close()
                 return data
             except socket_error:
                 errno, errstr = sys.exc_info()[:2]
-                print "Error connecting to server:", errstr
+                logging.error("Error connecting to server: %s", errstr)
         return None
 
 
@@ -136,8 +137,7 @@ class MyDHTClient(CmdApp):
             file = self.getarg("-f") or self.getarg("--file")
             outfile = self.getarg("-o") or self.getarg("--outfile")
 
-            self.debug("command:",\
-            str(server),command,key,value)
+            logging.debug("command: %s %s %s %s", str(server), command, key, value)
             if command is None or server is None or file and value:
                 self.help()
                 

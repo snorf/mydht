@@ -1,4 +1,5 @@
 import copy
+import logging
 import select
 import signal
 from socket import *
@@ -7,7 +8,6 @@ import sys
 import os
 import thread
 import threading
-import traceback
 from HashRing import HashRing, Server
 from MyDHTTable import MyDHTTable
 from cmdapp import CmdApp
@@ -35,8 +35,6 @@ class MyDHTServer(CmdApp):
              specify server to join existing ring
            -r, --replicas
              specify the number of replicas (only first server may specify replicas, 3 is default)
-           -l, --logfile
-             specify a logfile
         """
 
     def cmdlinestart(self):
@@ -50,17 +48,14 @@ class MyDHTServer(CmdApp):
             remoteserver = self.getarg("-s") or self.getarg("-server")
             replicas = self.getarg("-r") or self.getarg("--replicas", 3)
             replicas = int(replicas)
-            logfile = self.getarg("-l") or self.getarg("--logfile")
             # Start the server
-            self.start(host=host,port=port,replicas=replicas,remote_server=remoteserver,logfile=logfile)
+            self.start(host=host,port=port,replicas=replicas,remote_server=remoteserver)
         except ValueError:
             self.help()
 
-    def start(self,host,port,replicas,remote_server=None,verbose=None,logfile=None,is_process=False):
+    def start(self,host,port,replicas,remote_server=None,is_process=False):
         """ Starts the server with `hostname`, `port`
             If `remove_server` is not None it will be contacted to join an existing ring
-            `verbose` enables debug logging
-            `logfile` specifies a logfile instead of stdout
             `is_process` is used when starting servers as processes, it is used to exit
             in a way pyunit likes if True.
         """
@@ -68,11 +63,6 @@ class MyDHTServer(CmdApp):
         self.remote_server = remote_server
         self.replicas = replicas
         self.is_process = is_process
-        if verbose:
-            self.verbose = True
-            self.client.verbose = True
-        if logfile:
-            sys.stdout = open(logfile,"w")
         self.serve()
 
     def add_new_node(self,new_node):
@@ -83,7 +73,7 @@ class MyDHTServer(CmdApp):
             localhost:50140|localhost:50141,3
         """
         self.ring_lock.acquire()
-        self.debug("adding:",new_node)
+        logging.debug("adding: %s", new_node)
         host, port = new_node.split(":")
         newserver = Server(host,port)
 
@@ -92,7 +82,7 @@ class MyDHTServer(CmdApp):
         self.forward_command(command)
 
         # Convert to a string list
-        ring = map(lambda serv: str(serv),set(self.hash_ring.ring.values()))
+        ring = map(lambda serv: str(serv),self.hash_ring.get_nodelist())
         # Add new server to this ring
         self.hash_ring.add_node(newserver)
         # Return |-separated list of nodes
@@ -164,18 +154,18 @@ class MyDHTServer(CmdApp):
                 local_timestamp = float(self.dht_table.perform(command))
                 if remote_time < local_timestamp:
                     # Key is missing or old
-                    self.debug("Copying: ",key,"to",server)
+                    logging.debug("Copying: %s to %s", key, server)
                     value = self.dht_table.perform(DHTCommand(DHTCommand.GET,key))
                     command = DHTCommand(DHTCommand.PUT,key,value,local_timestamp)
                     status = self.client.sendcommand(server,command)
-                    self.debug(status)
+                    logging.debug("status: %s", status)
                 elif remote_time > local_timestamp:
                     # Remote object is newer, get it
-                    self.debug("Copying: ",key,"from",server)
+                    logging.debug("Copying: %s from %s", key, server)
                     command = DHTCommand(DHTCommand.GET,key)
                     value = self.client.sendcommand(server,command)
                     status = self.dht_table.perform(DHTCommand(DHTCommand.PUT,key,value,remote_time))
-                    self.debug(status)
+                    logging.debug(status)
         return "BALANCE ok"
 
     def forward_data(self,from_socket,to_socket,length):
@@ -208,7 +198,7 @@ class MyDHTServer(CmdApp):
             for server in self.hash_ring.get_nodelist():
                 if self.this_server != server:
                     remote_status = self.client.sendcommand(server,copy.deepcopy(command))
-                    self.debug(remote_status)
+                    logging.debug(remote_status)
         return command
 
     def handle_replica_command(self,command,client_sock):
@@ -222,7 +212,8 @@ class MyDHTServer(CmdApp):
         """
         # Find out where the key is found
         key_is_at = self.hash_ring.get_replicas(command.key)
-        self.debug(command.key,"is at"," ".join(map(lambda msg: str(msg), key_is_at)),"according to",str(self.hash_ring))
+        replica_servers = " ".join(map(lambda msg: str(msg), key_is_at))
+        logging.debug("%s is at [%s] according to [%s]", command.key, replica_servers, str(self.hash_ring))
 
         status = "UNKNOWN_ERROR"
 
@@ -245,7 +236,7 @@ class MyDHTServer(CmdApp):
                 if command.action != DHTCommand.GET:
                     for server in key_is_at:
                         remote_status = self.client.sendcommand(server,copy.deepcopy(command))
-                        self.debug(remote_status)
+                        logging.debug("remote status: %s", remote_status)
 
         else:
             # Forward request to one of the servers responsible for the key
@@ -281,9 +272,9 @@ class MyDHTServer(CmdApp):
                     break
                 except socket_error:
                     errno, errstr = sys.exc_info()[:2]
-                    print "Error relaying to/from server: ", server, errstr
+                    logging.error("Error relaying to/from server: %s, error %s", str(server), errstr)
             else:
-                self.debug("No nodes were found")
+                logging.error("No nodes were found")
                 status = "No nodes where found"
 
         return status
@@ -296,7 +287,7 @@ class MyDHTServer(CmdApp):
         rawcommand = client_sock.recv(_block)
         command = DHTCommand().parse(rawcommand)
 
-        self.debug("received",str(command))
+        logging.debug("received command: %s", str(command))
         if command.action in [DHTCommand.PUT,DHTCommand.GET,DHTCommand.DEL]:
             status = self.handle_replica_command(command,client_sock)
             # If the command was forwarded to another
@@ -349,7 +340,7 @@ class MyDHTServer(CmdApp):
     def signal_handler(self,signal,frame):
         """ Handle SIGINT by doing decommission.
         """
-        self.debug("Exiting from SIGINT")
+        logging.debug("Exiting from SIGINT")
         self.decommission()
         if self.is_process:
             # Exit softly if this is a subprocess
@@ -370,8 +361,10 @@ class MyDHTServer(CmdApp):
             # Send a join command to the existing server
             command = DHTCommand(DHTCommand.JOIN,self.this_server)
             ring = self.client.sendcommand(remote_server,command)
-            self.debug("got ring from server:",str(ring))
+            logging.debug("got ring from server: %s", str(ring))
             # Get replicas
+            if not ring:
+                raise RuntimeError(("Could not reach server: %s" % str(remote_server)))
             nodes,replicas = ring.split(",")
             # Convert |-separated list to Server-instances
             nodes =  map(lambda server_string: Server(server_string.split(":")[0],server_string.split(":")[1]) ,nodes.split("|"))
@@ -395,7 +388,7 @@ class MyDHTServer(CmdApp):
         # Register SIGINT handler
         signal.signal(signal.SIGINT, self.signal_handler)
 
-        self.debug("Starting server at",str(self.this_server))
+        logging.info("Starting server at %s", str(self.this_server))
         server_sock = socket(AF_INET,SOCK_STREAM)
         try:
             server_sock.bind((self.this_server.bindaddress()))
@@ -407,11 +400,13 @@ class MyDHTServer(CmdApp):
 
             while 1:
                 client_sock, client_addr = server_sock.accept()
-                #self.debug("Server connected by", clientaddr)
+                #logging.debug("Server connected by %s", client_addr)
                 thread.start_new_thread(self.server_thread, (client_sock,))
         except socket_error:
             errno, errstr = sys.exc_info()[:2]
-            print "Unable to bind to socket: ",errstr
+            logging.error("Unable to bind to socket: %s", errstr)
+        except RuntimeError, e:
+            logging.error("%s", e)
 
 if __name__ == "__main__":
     MyDHTServer().cmdlinestart()

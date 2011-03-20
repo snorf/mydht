@@ -15,6 +15,19 @@ class Server():
         """
         return self.host + ":" + str(self.port)
 
+    def __repr__(self):
+        """ Returns `host`:`port`
+        """
+        return self.host + ":" + str(self.port)
+
+    def __cmp__(self, other):
+        if str(self) < str(other):
+            return -1
+        elif str(self) == str(other):
+            return 0
+        else:
+            return 1
+
     def bindaddress(self):
         """ Returns (`host`,`port`)
         """
@@ -43,7 +56,7 @@ class HashRing(object):
                 self.add_node(node)
 
     def __str__(self):
-        return " ".join(map(lambda server: str(server),self.ring.values()))
+        return " ".join(map(lambda server: str(server),self.get_nodelist()))
 
     def add_node(self, node):
         """Adds a `node` to the hash ring (including a number of replicas).
@@ -144,7 +157,7 @@ class HashRing(object):
                 yield self.ring[key]
 
     def get_nodelist(self):
-        """ Given a string key returns the nodes as a set.
+        """ Return a unique sorted list of nodes
         """
         if not self.ring:
             return []
@@ -154,6 +167,7 @@ class HashRing(object):
             if self.ring[key] not in nodelist:
                 nodelist.append(self.ring[key])
 
+        nodelist.sort()
         return nodelist
 
 

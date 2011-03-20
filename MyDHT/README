@@ -296,10 +296,13 @@
         sure that there are things that I've missed. Also I have used "except:" without an exception
         in some places and this is not really good.
 
-        7.6 Windows/Linux compability
-        -----------------------------
+        7.6 Windows/Linux compatibility
+        -------------------------------
         The system runs on Linux and Windows and you can use nodes from both worlds but it is not possible
         to write a file from Windows and read it from Linux. Or at least I have not been able to do this.
+
+        Also there is something strange when sending packets from Windows to Linux so it is not recommended
+        to use nodes running on both OS:es at the same time.
 
         7.7 Every node holds the full ring
         ----------------------------------
@@ -330,7 +333,7 @@
         it would be good to have an even distribution.
 
         Also it would be good to be able to add a node to a specific place in the ring (like in Apache
-        Cassandra).
+        Cassandra). The ring should also take into account the physical location of a node (distance etc).
 
         7.10 No bootstrapping for new nodes
         -----------------------------------
@@ -342,6 +345,21 @@
         I know that most DHT's don't have a web interface, I built it for debugging purposes and left it
         because I think it is useful when reviewing this assignment.
 
-    8. Summary
+        7.12 Logging
+        ------------
+        Right now I have only used stdout for logging, it is possible to redirect it to a file but that's
+        about it. After each write to the log I am flushing stdout which is probably not the best way to
+        do this.
+
+        The best thing would be to replace this primitive logging with the logging facility in python.
+        At the time of this writing I realize that it would not be a problem but I'm leaving it as is
+        since there are probably something that will 
+
+    9. Summary
     ----------
     This was by far the most fun I have had in a long time. I've learned a lot of Python by doing this.
+
+    I have tried to keep the code as simple and clean as possible.
+    The server (MyDHTServer) reuses a lot of code from MyDHTClient when communicating.
+    The only communication that's server specific is the exchange of hash ring at start and relaying
+    data from an incoming socket to another node.
