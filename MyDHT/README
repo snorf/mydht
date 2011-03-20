@@ -345,17 +345,7 @@
         I know that most DHT's don't have a web interface, I built it for debugging purposes and left it
         because I think it is useful when reviewing this assignment.
 
-        7.12 Logging
-        ------------
-        Right now I have only used stdout for logging, it is possible to redirect it to a file but that's
-        about it. After each write to the log I am flushing stdout which is probably not the best way to
-        do this.
-
-        The best thing would be to replace this primitive logging with the logging facility in python.
-        At the time of this writing I realize that it would not be a problem but I'm leaving it as is
-        since there are probably something that will 
-
-    9. Summary
+    8. Summary
     ----------
     This was by far the most fun I have had in a long time. I've learned a lot of Python by doing this.
 
