@@ -287,8 +287,6 @@ class MyDHTServer(CmdApp):
 
         # Shutdown write end of socket
         client_sock.shutdown(SHUT_WR)
-        # Wait for end which will be received when the client closes the socket.
-        end = client_sock.recv(_block)
         # Close socket
         client_sock.close()
 
