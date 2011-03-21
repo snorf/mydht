@@ -48,15 +48,21 @@ class MyDHTClient(CmdApp):
             sent = socket.send(chunk)
             if not sent:
                 raise RuntimeError("socket connection broken")
-            totalsent += sent        
+            totalsent += sent
 
     def read_from_socket(self,size,socket,outstream=None):
         """  Read `size` data from `socket` and save it
              to either outstream (if it is an open file)
              or return it as a string.
+
+             To be able to handle web request there it is possible
+             to break the loop prior to size has been received.
+             It looks for a GET / in the beginning of the data
+             and \r\n\r\n in the end.
         """
         received = 0
         data = StringIO()
+        webbrowser = False
         while received < size:
             incoming = socket.recv(size - received)
             if not incoming: break
@@ -66,6 +72,15 @@ class MyDHTClient(CmdApp):
                 outstream.write(incoming)
             else:
                 data.write(incoming)
+
+            # Check if incoming starts with HTTP GET
+            if incoming[0:5] == "GET /":
+                webbrowser = True
+            # Break if data endswith \r\n and webbrowser
+            if webbrowser and incoming.endswith("\r\n\r\n"):
+                logging.debug("Request was a browser, breaking")
+                break;
+
         return data.getvalue()
 
     def send_length_to_socket(self,length,socket):
@@ -106,7 +121,6 @@ class MyDHTClient(CmdApp):
                     self.send_to_socket(command.value,command.size,sock)
 
                 length = self.read_length_from_socket(sock)
-                #logging.debug("receiving a file with size %d", length)
                 data = self.read_from_socket(length,sock,outstream)
 
                 sock.close()

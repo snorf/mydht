@@ -322,6 +322,14 @@
 
         I tried to do this but the code did not turn out well so I reverted back to this simple solution.
 
+        I tried to read from one incoming socket and forward it to another server but this failed when I started
+        testing with different machines so I had to revert back to the solution where the first node that receives
+        the command will store the data and then forward it. This works but it would be cleaner to just
+        forward the request by by using the select syscall on incoming and outgoing sockets.
+
+        Storing data on nodes while forwarding request is maybe not a problem unless you transfer very large
+        files. Memcached for example has a limit of 1 MB and with that amount it should not be a problem.
+
         Maybe there should be a way of changing the number of replica nodes after the ring has been started.
         This should be fairly easy, just let all the nodes change their replicas value in HashRing.py and
         then do a load balance.

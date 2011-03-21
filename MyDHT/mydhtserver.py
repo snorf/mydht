@@ -8,6 +8,7 @@ import sys
 import os
 import thread
 import threading
+import traceback
 from HashRing import HashRing, Server
 from MyDHTTable import MyDHTTable
 from cmdapp import CmdApp
@@ -76,6 +77,7 @@ class MyDHTServer(CmdApp):
         logging.debug("adding: %s", new_node)
         host, port = new_node.split(":")
         newserver = Server(host,port)
+        self.hash_ring.remove_node(newserver)
 
         # Add the new server to all existing nodes
         command = DHTCommand(DHTCommand.ADDNODE,newserver)
@@ -172,26 +174,6 @@ class MyDHTServer(CmdApp):
                     logging.debug(status)
         return "BALANCE ok"
 
-    def forward_data(self,from_socket,to_socket,length):
-        """ Forwards data from `from_socket` to `to_socket`
-            by using select to wait.
-            `length` is the size.
-
-            At first i used:
-            buf = bytearray(_block)
-            length = from_socket.recv_into(buf, _block)
-            but this didn't work in Python 2.6 on Linux (Windows with 2.7 was fine).
-        """
-        done = 0
-        while done < length:
-            readable, writable, exceptional = select.select([from_socket],[to_socket],[])
-            if not readable: select.select([from_socket],[],[])
-            elif not writable: select.select([],[to_socket],[])
-            buf = from_socket.recv(_block)
-            done += len(buf)
-            sent = to_socket.send(buf)
-            assert sent == len(buf)
-
     def forward_command(self,command):
         """ Forwards `command` to all other servers except this
             Sets command.forwarded to True so that the receiving
@@ -206,7 +188,7 @@ class MyDHTServer(CmdApp):
         return command
 
     def handle_replica_command(self,command,client_sock):
-        """ Handle `cmd` from `client_sock`
+        """ Handle `command` from `client_sock`
             If the key is found on this server it will be handled here
             or else it will be forwarded to the first server that is
             responding.
@@ -219,68 +201,40 @@ class MyDHTServer(CmdApp):
         replica_servers = " ".join(map(lambda msg: str(msg), key_is_at))
         logging.debug("%s is at [%s] according to [%s]", command.key, replica_servers, str(self.hash_ring))
 
-        status = "UNKNOWN_ERROR"
-
-        # Check if key is found locally
-        if self.this_server in key_is_at:
-            local = True
-            key_is_at.remove(self.this_server)
-        else:
-            local = False
-
+        # If key is local, remove this server from replicas
+        local = (self.this_server in key_is_at)
         if local:
-            # If the command is PUT, download the data before replicating
-            if command.action == DHTCommand.PUT:
-                command.value = self.client.read_from_socket(command.size,client_sock)
-                
+            key_is_at.remove(self.this_server)
+
+        # If the command is PUT, download the data
+        if command.action == DHTCommand.PUT:
+            command.value = self.client.read_from_socket(command.size,client_sock)
+
+        # If key is on this server, perform the action, if it was a get return immediately
+        if local:
             status = self.dht_table.perform(command)
-            # Replicate data to other nodes if it was not a GET command
-            if not command.forwarded:
-                command.forwarded = True
-                if command.action != DHTCommand.GET:
-                    for server in key_is_at:
-                        remote_status = self.client.sendcommand(server,copy.deepcopy(command))
-                        logging.debug("remote status: %s", remote_status)
+            if command.action == DHTCommand.GET and status != "ERR_VALUE_NOT_FOUND":
+                return status
 
-        else:
-            # Forward request to one of the servers responsible for the key
-            # The responding server will take care of replication
+        # Replicate data to other nodes if it was not a GET command and the command was not already forwarded
+        failures = 0
+        if not command.forwarded:
+            command.forwarded = True
             for server in key_is_at:
-                try:
-                    # For all possible replica nodes
-                    # Connect to remote node
-                    sock = socket(AF_INET, SOCK_STREAM)
-                    sock.connect((server.bindaddress()))
+                response = self.client.sendcommand(server,copy.deepcopy(command))
+                if response:
+                    status = response
+                    
+                    if command.action != DHTCommand.GET:
+                        logging.debug("remote status: %s", status)
 
-                    # Send the command
-                    sock.send(command.getmessage())
+                    # If this was a get and the response is valid, return
+                    if command.action == DHTCommand.GET  and status != "ERR_VALUE_NOT_FOUND":
+                        return status
+                else:
+                    failures += 1
 
-                    # Forward data from incoming clientsock to sock
-                    self.forward_data(client_sock,sock,command.size)
-
-                    # Receive length of answer
-                    length = self.client.read_length_from_socket(sock)
-                    # Forward length to client
-                    self.client.send_length_to_socket(length,client_sock)
-
-                    # Forward the answer from sock to clientsock
-                    self.forward_data(sock,client_sock,length)
-
-                    # Close outgoing socket
-                    sock.close()
-
-                    # Close socket in a friendly way
-                    client_sock.shutdown(SHUT_WR)
-                    end = client_sock.recv(_block)
-                    client_sock.close()
-                    break
-                except socket_error:
-                    errno, errstr = sys.exc_info()[:2]
-                    logging.error("Error relaying to/from server: %s, error %s", str(server), errstr)
-            else:
-                logging.error("No nodes were found")
-                status = "No nodes where found"
-
+        logging.debug("Performed command %s (failures: %d)", command, failures)
         return status
 
     def server_thread(self,client_sock):
@@ -288,16 +242,13 @@ class MyDHTServer(CmdApp):
             `client_sock` is the socket where the client is connected
             perform the operation and connect to another server if necessary
         """
-        rawcommand = client_sock.recv(_block)
+        rawcommand = self.client.read_from_socket(_block,client_sock)
         command = DHTCommand().parse(rawcommand)
 
         logging.debug("received command: %s", str(command))
         if command.action in [DHTCommand.PUT,DHTCommand.GET,DHTCommand.DEL]:
+            # Perform the command and any replication
             status = self.handle_replica_command(command,client_sock)
-            # If the command was forwarded to another
-            # server we have already closed the socket
-            if not command.forwarded:
-                return
         elif command.action == DHTCommand.JOIN:
             # A client wants to join the ring
             status = self.add_new_node(command.key)
@@ -404,7 +355,6 @@ class MyDHTServer(CmdApp):
 
             while 1:
                 client_sock, client_addr = server_sock.accept()
-                #logging.debug("Server connected by %s", client_addr)
                 thread.start_new_thread(self.server_thread, (client_sock,))
         except socket_error:
             errno, errstr = sys.exc_info()[:2]
