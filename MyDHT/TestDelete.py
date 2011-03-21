@@ -17,18 +17,17 @@ class TestMyDHT(unittest.TestCase):
             self.servers.append(Server(host,port))
         self.dht = MyDHTClient(True)
 
-    def testUploadFiles(self):
+    def testDeleteFiles(self):
         """ Open files in upload/ in binary mode
             and send them to dht
         """
         for i,file in enumerate(glob.glob("upload/*")):
-            with open(file, "rb") as f:
-                command = DHTCommand(DHTCommand.PUT,file,f)
-                response = self.dht.sendcommand(self.servers[i % len(self.ports)],command)
-            self.assertEquals(response,"PUT OK " + file)
-            command = DHTCommand(DHTCommand.PUT,"key for:"+file,"this is the key for:"+file)
+            command = DHTCommand(DHTCommand.DEL,file)
             response = self.dht.sendcommand(self.servers[i % len(self.ports)],command)
-            self.assertEquals(response,"PUT OK key for:" + file)
+            self.assertEquals(response,"DEL OK " + file)
+            command = DHTCommand(DHTCommand.DEL,"key for:"+file,"this is the key for:"+file)
+            response = self.dht.sendcommand(self.servers[i % len(self.ports)],command)
+            self.assertEquals(response,"DEL OK key for:" + file)
 
 if __name__ == '__main__':
     unittest.main()

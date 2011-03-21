@@ -17,6 +17,19 @@
     I have focused on implementing dynamic add and remove of nodes.
     Load balancing and replication for increased protection against
     a server failure.
+
+    If a node is removed in a nice fashion (SIGINT) it will handover
+    all it's data to other nodes. If a node crashes the action REMOVE
+    can be sent to a node with the crashed node as the key, this will
+    remove the node from all other nodes and perform a load balancing.
+
+    During a load balancing action all nodes will compare their keys
+    with the replica nodes keys (using timestamps) and the the newest
+    version of a value will be copied to all nodes.
+
+    After a load balancing the PURGE operation may be used to purge
+    keys from a node that don't belong there anymore.
+
     
     2. Documentation
     -------------
@@ -40,7 +53,7 @@
     4. Dependencies
     ------------
 
-    MyDHT has been tested with python 2.6.? on Ubuntu Server 10.10,
+    MyDHT has been tested with python 2.6 on Ubuntu Server 10.10,
     Ubuntu 10.04 Desktop and Windows 7 x64.
 
     If nodes are to be run on separate machines the hostname must
@@ -351,7 +364,50 @@
         7.11 The web interface
         ----------------------
         I know that most DHT's don't have a web interface, I built it for debugging purposes and left it
-        because I think it is useful when reviewing this assignment.
+        because I think it is useful when reviewing this assignment since it is much easier to overview
+        a nodes view of the ring and which key/values are on it. It is also very easy to test that for example
+        an image is found (and looks the same) on all replica nodes by just clicking an url in the web browser.
+
+        There are some ugly code in dhtclient for this to work. Since the web browser does not send exactly
+        4096 bytes in a request I have to break the loop in read_from_socket when the received data starts
+        with "GET /" and ends with "\r\n\r\n" (terminator for HTTP).
+
+        7.12 Test cases
+        ---------------
+        The number of test cases are limited and they only test GET, PUT and DEL actions. It would have been
+        nice to have larger scale tests which started nodes in different processes. I wrote some of these
+        initially but since TCP/IP-communication seems to work perfect when everybody is on the same machine
+        I removed them.
+
+        I have however created a script for to start servers easily, createservers.py
+
+        Example:
+        $ python createservers.py -h 192.168.0.150 -p 50140 -n 4
+        > python mydhtserver.py -h 192.168.0.150 -p 50140 -v -l 192.168.0.150-50140.log &
+        > python mydhtserver.py -h 192.168.0.150 -p 50141 -s 192.168.0.150:50140 -v -l 192.168.0.150-50141.log &
+        > python mydhtserver.py -h 192.168.0.150 -p 50142 -s 192.168.0.150:50140 -v -l 192.168.0.150-50142.log &
+        > python mydhtserver.py -h 192.168.0.150 -p 50143 -s 192.168.0.150:50140 -v -l 192.168.0.150-50143.log &
+
+        This will print 4 command lines that will start a new node for each line, all of them connecting to
+        the first node (at port 50140).
+
+        If the new servers should connect to an existing ring:
+        $ python createservers.py -h 192.168.0.150 -p 50140 -n 4 -s 192.168.0.200:50400
+        > python mydhtserver.py -h 192.168.0.150 -p 50140 -s 192.168.0.200:50400 -v -l 192.168.0.150-50140.log &
+        > python mydhtserver.py -h 192.168.0.150 -p 50141 -s 192.168.0.200:50400 -v -l 192.168.0.150-50141.log &
+        > python mydhtserver.py -h 192.168.0.150 -p 50142 -s 192.168.0.200:50400 -v -l 192.168.0.150-50142.log &
+        > python mydhtserver.py -h 192.168.0.150 -p 50143 -s 192.168.0.200:50400 -v -l 192.168.0.150-50143.log &
+
+        Also all output will be logged to a logfile if not -l filename is removed.
+
+        7.13 Installation
+        -----------------
+        I have choosen not to do any fancy installation scripts.
+
+        7.14 Examples
+        -------------
+        I have not provided any examples for using the classes in existing code, however the test cases
+        performs GET, PUT and DEL and this could be used as a first example.
 
     8. Summary
     ----------
@@ -359,5 +415,11 @@
 
     I have tried to keep the code as simple and clean as possible.
     The server (MyDHTServer) reuses a lot of code from MyDHTClient when communicating.
-    The only communication that's server specific is the exchange of hash ring at start and relaying
-    data from an incoming socket to another node.
+
+    I have tested the system on 2 different linux machines with 5 node on each one.
+    Uploading about 120 MB to the ring at various sizes (not all 10 nodes active from start).
+    Added, removed rings (both nicely and not so nice).
+    Load balanced, purged, deleted keys.
+    During all these test I have regularly downloaded all keys from the ring (from different node(s))
+    and verified with diff that the content in my upload-directory is the same as in my download-directory.
+    
