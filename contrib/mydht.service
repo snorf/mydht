@@ -1,0 +1,39 @@
+[Unit]
+Description=MyDHT distributed hash table node
+Documentation=https://github.com/snorf/mydht
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/mydht
+ExecStart=/opt/mydht/bin/mydht serve \
+    --host ${MYDHT_HOST} \
+    --port ${MYDHT_PORT} \
+    --bind ${MYDHT_BIND} \
+    --join ${MYDHT_JOIN} \
+    --replicas ${MYDHT_REPLICAS} \
+    --data-dir /var/lib/mydht
+
+# SIGTERM makes the node leave the ring and hand its keys to the other
+# nodes first; give it time to do that before systemd kills it.
+KillSignal=SIGTERM
+TimeoutStopSec=120
+Restart=on-failure
+RestartSec=5
+
+# Runs as a throwaway user that only owns /var/lib/mydht.
+DynamicUser=yes
+StateDirectory=mydht
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
