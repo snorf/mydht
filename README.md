@@ -52,7 +52,9 @@ This is a rewrite for Python 3.10+ that keeps the 2011 design and fixes how it w
 | Deletes | Key removed, could come back | Tombstones, so a delete survives anti-entropy |
 | Load balancing | One `HASKEY` round trip per key and replica | Each node fetches one digest per peer, then pulls and pushes only what differs |
 | Purge | Dropped keys without checking | Drops a key only when every current replica has a version at least as new |
-| Tests | Manual scripts | 21 unit and end-to-end tests with real nodes on ephemeral ports |
+| Storage | Memory | Memory, or an SQLite file per node with `--data-dir` |
+| Running as a service | Background shell jobs from `createservers.py` | systemd unit and install script in [`contrib/`](contrib/) |
+| Tests | Manual scripts | 27 unit and end-to-end tests with real nodes on ephemeral ports |
 | Dependencies | None | Still none, only the standard library |
 
 ---
@@ -71,8 +73,27 @@ python -m mydht serve --port 50142 --join localhost:50140
 
 - `--host` is the name other nodes use to reach this node. Across machines, set it to something the other nodes can resolve. Use `--bind 0.0.0.0` if the node should listen on a different address than `--host`.
 - `--replicas` sets how many copies each key gets (default 3). Only the first node's setting counts; nodes that join use the cluster's value.
+- `--data-dir DIR` keeps the node's data in an SQLite file in `DIR`, so it survives restarts. Without it, everything is kept in memory.
+- `--join` takes one node or a comma-separated list. The node skips itself, joins the first one that answers, and if none answers it starts alone and retries every 10 seconds. That means every node can get the same list and the nodes can start in any order.
 - **Ctrl-C** (SIGINT or SIGTERM) makes a node leave cleanly: it leaves the ring and hands its keys to their new replicas.
 - `python -m mydht cluster --nodes 5` runs several nodes in one process, which is handy for trying things out.
+
+### As a systemd service
+
+[`contrib/`](contrib/) has what you need to run one node per machine, for example one per host or container in a small home lab. On each machine:
+
+```sh
+git clone https://github.com/snorf/mydht && cd mydht
+sudo ./contrib/install.sh           # virtualenv in /opt/mydht, unit, /etc/default/mydht
+sudoedit /etc/default/mydht         # set MYDHT_HOST to this machine's address
+sudo systemctl enable --now mydht
+journalctl -u mydht -f
+```
+
+- **Settings:** `/etc/default/mydht` sets the host, port and bind address, and `MYDHT_JOIN` lists every node in the cluster. The same `MYDHT_JOIN` line works on all machines.
+- **Data:** stored in `/var/lib/mydht`. The service runs as a dynamic user that can write only there.
+- **Stopping:** `systemctl stop` sends SIGTERM, so the node hands over its keys before it exits. `systemctl restart` rejoins the ring and pulls any changes the node missed while it was down.
+- **Upgrading:** pull the new code, run `install.sh` again and restart the service.
 
 ## Using it with curl
 
@@ -135,7 +156,7 @@ Nodes talk to each other through endpoints under `/internal/`. They are not mean
 **Anti-entropy** (`POST /balance`). Each node fetches a digest of `{key: timestamp}` from every peer. For each key it is a replica of, it pulls a newer version if a peer has one. Then it pushes its own version to every replica that is behind. This runs automatically when a node joins or leaves, or when a crashed node is removed.
 
 **Membership.**
-- **Join:** a new node asks any existing node to join. That node tells the rest of the ring and returns the member list. The newcomer then triggers a balance so it receives the keys it now owns.
+- **Join:** a new node asks any existing node to join. That node tells the rest of the ring and returns the member list. The newcomer then triggers a balance so it receives the keys it now owns. A node restarted with `--data-dir` does the same: its old data comes back from disk, and the balance pulls newer versions and tombstones from the others while pushing anything the others lack.
 - **Leave:** a node that shuts down cleanly first removes itself everywhere, then pushes its keys to their new owners.
 - **Crash:** the cluster keeps working as long as a majority of each key's replicas is up. `DELETE /ring/{node}` removes the dead node for good and rebuilds the missing copies.
 
@@ -145,7 +166,8 @@ Nodes talk to each other through endpoints under `/internal/`. They are not mean
 
 This is still a toy, just a better-built one. Don't put data you care about in it.
 
-- **Memory only.** Nothing is written to disk. If every replica of a key goes down, the key is lost.
+- **Memory by default.** Without `--data-dir` nothing is written to disk, and if every replica of a key goes down, the key is lost. With `--data-dir`, SQLite runs in WAL mode with `synchronous=NORMAL`, so a power cut can lose the last few writes on a node. The other replicas normally still have them.
+- **Split brain at startup.** A node that cannot reach any of its `--join` nodes starts a ring of its own. If the network is split when the nodes boot, you get two rings, which accept writes separately until they reach each other again. A node that is alone keeps retrying and merges its ring with the others, and the newest version of each key wins. With three nodes one side of a split is always a single node, so the rings always merge. With more nodes, two rings of several nodes each stay apart until you restart one side.
 - **Wall-clock timestamps.** "Last write wins" trusts the clocks on the nodes. If the clocks drift, a newer write can lose to an older one. Real systems use vector clocks or hybrid logical clocks for this.
 - **Tombstones are kept forever.** They are never garbage-collected.
 - **Membership is not consensus.** Nodes that join or leave at the same moment can leave members with different views of the ring for a while. Anti-entropy eventually fixes the data, but nothing guarantees the members agree on the ring.
@@ -167,3 +189,4 @@ The tests start real nodes on ephemeral ports and exercise the following:
 - tombstones surviving anti-entropy
 - safe purge
 - chunked uploads (`curl -T -`)
+- restarts with `--data-dir`, including a whole cluster starting in any order

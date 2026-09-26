@@ -25,12 +25,12 @@ import logging
 import mimetypes
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional
+from typing import Iterable, Optional, Union
 from urllib.parse import unquote, urlsplit
 
 from . import peers
 from .hashring import HashRing
-from .store import Entry, Store, now
+from .store import Entry, now, open_store
 
 log = logging.getLogger(__name__)
 
@@ -56,51 +56,88 @@ class Node:
         replicas: int = 3,
         bind: Optional[str] = None,
         timeout: float = 5.0,
+        data_dir: Optional[str] = None,
+        rejoin_interval: float = 10.0,
     ):
         self.httpd = ThreadingHTTPServer((bind or host, port), _make_handler(self))
         self.httpd.daemon_threads = True
         self.name = f"{host}:{self.httpd.server_address[1]}"
         self.ring = HashRing([self.name], replicas=replicas)
-        self.store = Store()
+        self.store = open_store(data_dir, self.name)
         self.timeout = timeout
+        self.rejoin_interval = rejoin_interval
         self._thread: Optional[threading.Thread] = None
+        self._stopping = threading.Event()
 
     # -- lifecycle ---------------------------------------------------------
 
-    def start(self, join: Optional[str] = None) -> "Node":
-        """Join an existing ring through ``join`` (if given) and start serving."""
-        if join:
-            self._join(join)
+    def start(self, join: Union[str, Iterable[str], None] = None) -> "Node":
+        """Join an existing ring and start serving.
+
+        ``join`` is one seed node or several (a list, or a comma-separated
+        string); the first one that answers is used. If none answers, the
+        node starts on its own and keeps retrying in the background, so the
+        nodes of a cluster can be started in any order.
+        """
+        seeds = self._seeds(join)
+        joined = self._join_any(seeds)
         self._thread = threading.Thread(
             target=self.httpd.serve_forever, name=f"mydht-{self.name}", daemon=True
         )
         self._thread.start()
         log.info("%s serving, ring: %s", self.name, " ".join(self.ring.nodes()))
-        if join:
-            # Ask everyone to hand over the keys this node is now a replica for.
+        if joined:
+            # Exchange data with the rest of the ring: receive the keys this
+            # node now owns, and hand back anything it kept on disk.
             self._background(self.balance_cluster)
+        elif seeds:
+            log.warning("%s could not reach %s, running alone and retrying",
+                        self.name, ", ".join(seeds))
+            self._background(self._keep_trying_to_join, seeds)
         return self
 
     def stop(self, leave: bool = True) -> None:
         """Stop serving. With ``leave`` the node first hands its data over."""
+        self._stopping.set()
         if leave:
             self.leave()
         self.httpd.shutdown()
         self.httpd.server_close()
+        self.store.close()
 
-    def _join(self, seed: str) -> None:
-        resp = self._call(seed, "POST", "/internal/join", self.name.encode())
-        if resp is None or resp.status != 200:
-            raise RuntimeError(f"could not join ring via {seed}")
-        info = resp.json()
-        self.ring = HashRing(info["nodes"], replicas=info["replicas"])
-        self.ring.add_node(self.name)
+    def _seeds(self, join) -> list[str]:
+        if not join:
+            return []
+        if isinstance(join, str):
+            join = join.split(",")
+        return [s.strip() for s in join if s.strip() and s.strip() != self.name]
+
+    def _join_any(self, seeds: list[str]) -> bool:
+        for seed in seeds:
+            resp = self._call(seed, "POST", "/internal/join", self.name.encode())
+            if resp is not None and resp.status == 200:
+                info = resp.json()
+                ring = HashRing(info["nodes"], replicas=info["replicas"])
+                ring.add_node(self.name)
+                self.ring = ring
+                return True
+        return False
+
+    def _keep_trying_to_join(self, seeds: list[str]) -> None:
+        # Stop once anyone has joined us or we have joined someone.
+        while not self._stopping.wait(self.rejoin_interval) and len(self.ring) == 1:
+            if self._join_any(seeds):
+                log.info("%s joined ring: %s", self.name, " ".join(self.ring.nodes()))
+                self.balance_cluster()
 
     def leave(self) -> None:
         """Leave the ring and push every key to its new replicas."""
         self.ring.remove_node(self.name)
         if not len(self.ring):
-            log.warning("%s was the last node; its data is lost", self.name)
+            if self.store.persistent:
+                log.info("%s was the last node; data is kept on disk", self.name)
+            else:
+                log.warning("%s was the last node; its data is lost", self.name)
             return
         self._broadcast("DELETE", f"/internal/ring/{self.name}")
         log.info("%s leaving, handing over data: %s", self.name, self.balance())
@@ -226,7 +263,7 @@ class Node:
         """
         digests = self._digests()
         reachable = {n: d for n, d in digests.items() if d is not None}
-        keys = {k for k, _ in self.store.items()}
+        keys = set(self.store.digest())
         for d in reachable.values():
             keys.update(d)
 
@@ -275,10 +312,11 @@ class Node:
         """
         digests = self._digests()
         dropped, kept = [], []
-        for key, entry in self.store.items():
+        for key, version in self.store.digest().items():
             replicas = self.ring.replicas_for(key)
             if self.name in replicas:
                 continue
+            entry = peers.entry_from_digest(version)
             safe = all(
                 digests.get(n) is not None
                 and key in digests[n]
@@ -298,17 +336,16 @@ class Node:
         e = html.escape
         rows = []
         total = 0
-        for key, entry in self.store.items():
-            size = len(entry.value or b"")
+        for key, timestamp, deleted, size in self.store.listing():
             total += size
             links = " ".join(
                 f'<a href="http://{e(n)}/">{e(n)}</a>' for n in self.ring.replicas_for(key)
             )
-            name = (f"<s>{e(key)}</s>" if entry.deleted
+            name = (f"<s>{e(key)}</s>" if deleted
                     else f'<a href="/keys/{e(peers.key_path(key))}">{e(key)}</a>')
             rows.append(
                 f"<tr><td>{name}</td><td>{_human(size)}</td>"
-                f"<td>{entry.timestamp}</td><td>{links}</td></tr>"
+                f"<td>{timestamp}</td><td>{links}</td></tr>"
             )
         nodes = "".join(
             f'<li><a href="http://{e(n)}/">{e(n)}</a>{" (this node)" if n == self.name else ""}</li>'
@@ -434,9 +471,9 @@ class _Handler(BaseHTTPRequestHandler):
         if self.command not in ("GET", "HEAD"):
             return self._text(405, "method not allowed")
         self._json(200, {
-            k: {"timestamp": e.timestamp, "deleted": e.deleted, "size": len(e.value or b""),
-                "replicas": self.node.ring.replicas_for(k)}
-            for k, e in self.node.store.items()
+            m.key: {"timestamp": m.timestamp, "deleted": m.deleted, "size": m.size,
+                    "replicas": self.node.ring.replicas_for(m.key)}
+            for m in self.node.store.listing()
         })
 
     def _key(self, key):

@@ -23,7 +23,9 @@ def wait_for(condition, timeout=5.0):
     return condition()
 
 
-class ClusterTest(unittest.TestCase):
+class ClusterTestCase(unittest.TestCase):
+    """Starts and cleans up nodes; the tests live in subclasses."""
+
     def setUp(self):
         self.nodes = []
 
@@ -36,12 +38,14 @@ class ClusterTest(unittest.TestCase):
 
     def start(self, count, replicas=3):
         for _ in range(count):
-            self.add_node(replicas)
+            self.add_node(replicas=replicas)
         return self.nodes
 
-    def add_node(self, replicas=3):
-        node = Node(HOST, 0, replicas=replicas, timeout=2.0)
-        node.start(join=self.nodes[0].name if self.nodes else None)
+    def add_node(self, replicas=3, port=0, join=None, **kwargs):
+        node = Node(HOST, port, replicas=replicas, timeout=2.0, **kwargs)
+        if join is None and self.nodes:
+            join = self.nodes[0].name
+        node.start(join=join)
         self.nodes.append(node)
         return node
 
@@ -71,6 +75,8 @@ class ClusterTest(unittest.TestCase):
             for k in keys
         )
 
+
+class ClusterTest(ClusterTestCase):
     # -- basic operations ----------------------------------------------------
 
     def test_put_get_delete_via_any_node(self):

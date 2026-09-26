@@ -1,7 +1,8 @@
 """Command line entry point.
 
-    python -m mydht serve [--host H] [--port P] [--join HOST:PORT] [--replicas N]
-    python -m mydht cluster [--nodes N] [--port P]
+    python -m mydht serve [--host H] [--port P] [--join HOST:PORT[,...]]
+                          [--replicas N] [--data-dir DIR]
+    python -m mydht cluster [--nodes N] [--port P] [--data-dir DIR]
 
 There is no client: the API is plain HTTP, use curl.
 """
@@ -24,7 +25,8 @@ def _wait_for_signal() -> None:
 
 
 def serve(args) -> None:
-    node = Node(args.host, args.port, replicas=args.replicas, bind=args.bind).start(args.join)
+    node = Node(args.host, args.port, replicas=args.replicas, bind=args.bind,
+                data_dir=args.data_dir).start(args.join)
     print(f"MyDHT node on http://{node.name}/  (Ctrl-C to leave the ring)")
     _wait_for_signal()
     node.stop(leave=True)
@@ -32,10 +34,10 @@ def serve(args) -> None:
 
 def cluster(args) -> None:
     """Run ``--nodes`` nodes in this process on consecutive ports."""
-    first = Node(args.host, args.port, replicas=args.replicas).start()
+    first = Node(args.host, args.port, replicas=args.replicas, data_dir=args.data_dir).start()
     nodes = [first]
     for i in range(1, args.nodes):
-        nodes.append(Node(args.host, args.port + i).start(join=first.name))
+        nodes.append(Node(args.host, args.port + i, data_dir=args.data_dir).start(join=first.name))
     for n in nodes:
         print(f"MyDHT node on http://{n.name}/")
     print("Ctrl-C to stop the cluster")
@@ -54,9 +56,13 @@ def main(argv=None) -> None:
                    help="name other nodes use to reach this one (default: localhost)")
     p.add_argument("--port", type=int, default=50140)
     p.add_argument("--bind", help="address to listen on (default: --host)")
-    p.add_argument("--join", metavar="HOST:PORT", help="join the ring through this node")
+    p.add_argument("--join", metavar="HOST:PORT[,...]",
+                   help="join the ring through the first of these nodes that answers; "
+                        "if none does, start alone and keep retrying")
     p.add_argument("--replicas", type=int, default=3,
                    help="copies of each key; only used by the first node (default: 3)")
+    p.add_argument("--data-dir", metavar="DIR",
+                   help="keep data in an SQLite file in DIR (default: memory only)")
     p.set_defaults(func=serve)
 
     p = sub.add_parser("cluster", help="run several nodes in one process, for trying it out")
@@ -64,6 +70,7 @@ def main(argv=None) -> None:
     p.add_argument("--port", type=int, default=50140, help="first port (default: 50140)")
     p.add_argument("--nodes", type=int, default=5)
     p.add_argument("--replicas", type=int, default=3)
+    p.add_argument("--data-dir", metavar="DIR", help="keep data on disk in DIR")
     p.set_defaults(func=cluster)
 
     args = parser.parse_args(argv)
