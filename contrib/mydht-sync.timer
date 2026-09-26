@@ -1,0 +1,9 @@
+[Unit]
+Description=Sync a file from MyDHT every minute
+
+[Timer]
+OnCalendar=*:*:00
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

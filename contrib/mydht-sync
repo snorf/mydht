@@ -1,0 +1,107 @@
+#!/bin/sh
+# mydht-sync: keep a local file in sync with a key in MyDHT.
+#
+# Meant to run every minute from mydht-sync.timer on every node. Each run:
+#
+#  1. Publish (only if MYDHT_SYNC_UPSTREAM is set, and only in this node's
+#     time slot): fetch the upstream URL and, if it differs from what the
+#     DHT has, upload it. With three nodes and slots 0, 1 and 2, the nodes
+#     take turns, one every MYDHT_SYNC_INTERVAL minutes, so upstream is
+#     polled as often as before but one dead node does not stop updates.
+#
+#  2. Pull: a conditional GET (If-None-Match) against the DHT. If there is
+#     a new version, replace MYDHT_SYNC_TARGET atomically and run
+#     MYDHT_SYNC_RELOAD. Otherwise the DHT answers 304 and nothing happens.
+#
+# Settings come from the environment, see mydht-sync.env.
+set -eu
+
+: "${MYDHT_SYNC_KEY:?set MYDHT_SYNC_KEY}"
+: "${MYDHT_SYNC_TARGET:?set MYDHT_SYNC_TARGET}"
+nodes=$(printf '%s' "${MYDHT_SYNC_NODES:-http://localhost:50140}" | tr ',' ' ')
+state=${MYDHT_SYNC_STATE:-/var/lib/mydht-sync}
+slot=${MYDHT_SYNC_SLOT:-0}
+slots=${MYDHT_SYNC_SLOTS:-1}
+interval=${MYDHT_SYNC_INTERVAL:-5}
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$state"
+
+log() { echo "mydht-sync: $*" >&2; }
+
+# dht OUTFILE [CURL_ARGS...]
+# Request the key from the first node that answers and print the HTTP status
+# (000 if no node answered). Response headers end up in $tmp/headers.
+dht() {
+    out=$1
+    shift
+    for node in $nodes; do
+        code=$(curl -s --max-time 30 -o "$out" -D "$tmp/headers" -w '%{http_code}' \
+            "$@" "$node/keys/$MYDHT_SYNC_KEY") || code=000
+        case $code in
+            000 | 5??) log "$node answered HTTP $code, trying the next node" ;;
+            *) echo "$code"; return 0 ;;
+        esac
+    done
+    echo 000
+}
+
+publish() {
+    [ -n "${MYDHT_SYNC_UPSTREAM:-}" ] || return 0
+    minute=$(( $(date +%s) / 60 ))
+    [ $(( minute % interval )) -eq 0 ] || return 0
+    [ $(( minute / interval % slots )) -eq "$slot" ] || return 0
+
+    if ! curl -fsSL --max-time 60 -o "$tmp/upstream" "$MYDHT_SYNC_UPSTREAM"; then
+        log "could not fetch $MYDHT_SYNC_UPSTREAM, keeping the current version"
+        return 0
+    fi
+    if [ ! -s "$tmp/upstream" ]; then
+        log "upstream returned an empty file, not publishing it"
+        return 0
+    fi
+    if [ "$(dht "$tmp/current")" = 200 ] && cmp -s "$tmp/upstream" "$tmp/current"; then
+        return 0
+    fi
+    code=$(dht /dev/null -T "$tmp/upstream")
+    if [ "$code" = 201 ]; then
+        log "published a new version of $MYDHT_SYNC_KEY from upstream"
+    else
+        log "publishing $MYDHT_SYNC_KEY failed: HTTP $code"
+    fi
+}
+
+pull() {
+    etag=$(cat "$state/etag" 2>/dev/null || true)
+    if [ -n "$etag" ] && [ -f "$MYDHT_SYNC_TARGET" ]; then
+        code=$(dht "$tmp/new" -H "If-None-Match: $etag")
+    else
+        code=$(dht "$tmp/new")
+    fi
+    case $code in
+        304) return 0 ;;
+        200) ;;
+        404) log "$MYDHT_SYNC_KEY is not in the DHT yet"; return 0 ;;
+        *) log "could not read $MYDHT_SYNC_KEY: HTTP $code"; return 1 ;;
+    esac
+
+    new_etag=$(sed -n 's/^[Ee][Tt][Aa][Gg]: *//p' "$tmp/headers" | tr -d '\r')
+    if [ -f "$MYDHT_SYNC_TARGET" ] && cmp -s "$tmp/new" "$MYDHT_SYNC_TARGET"; then
+        printf '%s\n' "$new_etag" > "$state/etag"
+        return 0
+    fi
+
+    # Write next to the target and rename, so readers never see half a file.
+    part="$(dirname "$MYDHT_SYNC_TARGET")/.$(basename "$MYDHT_SYNC_TARGET").mydht-sync"
+    cp "$tmp/new" "$part"
+    mv "$part" "$MYDHT_SYNC_TARGET"
+    printf '%s\n' "$new_etag" > "$state/etag"
+    log "updated $MYDHT_SYNC_TARGET"
+    if [ -n "${MYDHT_SYNC_RELOAD:-}" ]; then
+        sh -c "$MYDHT_SYNC_RELOAD"
+    fi
+}
+
+publish
+pull

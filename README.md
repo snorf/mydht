@@ -54,7 +54,7 @@ This is a rewrite for Python 3.10+ that keeps the 2011 design and fixes how it w
 | Purge | Dropped keys without checking | Drops a key only when every current replica has a version at least as new |
 | Storage | Memory | Memory, or an SQLite file per node with `--data-dir` |
 | Running as a service | Background shell jobs from `createservers.py` | systemd unit and install script in [`contrib/`](contrib/) |
-| Tests | Manual scripts | 27 unit and end-to-end tests with real nodes on ephemeral ports |
+| Tests | Manual scripts | 33 unit and end-to-end tests with real nodes on ephemeral ports |
 | Dependencies | None | Still none, only the standard library |
 
 ---
@@ -95,6 +95,25 @@ journalctl -u mydht -f
 - **Stopping:** `systemctl stop` sends SIGTERM, so the node hands over its keys before it exits. `systemctl restart` rejoins the ring and pulls any changes the node missed while it was down.
 - **Upgrading:** pull the new code, run `install.sh` again and restart the service.
 
+### Keeping a file in sync on every node
+
+`contrib/mydht-sync` keeps a local file identical on every machine. For example, it can share one `hosts.conf` between three DNS servers. `install.sh` installs the script together with a timer, but doesn't enable the timer. Every minute the timer does the following:
+
+1. **Pull.** It asks the DHT for the key with `If-None-Match`. The answer is usually `304`, and then nothing happens. If there is a new version, it replaces the target file atomically and runs your reload command.
+2. **Publish (optional).** If `MYDHT_SYNC_UPSTREAM` is set, the node fetches that URL (for example a raw file on GitLab) and uploads it if it differs from the DHT copy. It only does this in its own turn: with `MYDHT_SYNC_SLOTS=3` and `MYDHT_SYNC_INTERVAL=5`, one node polls upstream every 5 minutes and each node every 15. If a node is down, only its turns are skipped. An empty or failed upstream response is never published.
+
+```sh
+sudoedit /etc/default/mydht-sync     # key, target file, reload command, upstream, slot
+sudo systemctl enable --now mydht-sync.timer
+journalctl -u mydht-sync -f
+```
+
+You can also push a new version by hand from any machine. It reaches every node within a minute:
+
+```sh
+curl -T hosts.conf localhost:50140/keys/nextdns/hosts.conf
+```
+
 ## Using it with curl
 
 ```sh
@@ -130,7 +149,7 @@ curl -T legacy/favicon.ico localhost:50140/keys/favicon.ico
 |---|---|
 | `GET /` | HTML status page for this node |
 | `PUT /keys/{key}` | Store the request body. Returns `201`, or `503` if a majority of replicas couldn't be reached. |
-| `GET` / `HEAD /keys/{key}` | Newest value across the replicas. Returns `404` if the key doesn't exist and `503` without a majority. |
+| `GET` / `HEAD /keys/{key}` | Newest value across the replicas. Returns `404` if the key doesn't exist and `503` without a majority. Responses carry `ETag` and `Last-Modified`. With `If-None-Match` or `If-Modified-Since`, the node answers `304 Not Modified` when you already have the newest version. |
 | `DELETE /keys/{key}` | Delete the key (writes a tombstone) |
 | `GET /keys` | Keys stored on this node, as JSON |
 | `GET /ring` | Ring members and replica count |
@@ -190,3 +209,4 @@ The tests start real nodes on ephemeral ports and exercise the following:
 - safe purge
 - chunked uploads (`curl -T -`)
 - restarts with `--data-dir`, including a whole cluster starting in any order
+- conditional GETs, and `contrib/mydht-sync` against a real cluster (needs `curl`)
