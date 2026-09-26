@@ -1,5 +1,7 @@
-.idea/
+__pycache__/
 *.pyc
-.gitignore*
-download/*
-upload/*
+*.egg-info/
+build/
+dist/
+.venv/
+.idea/

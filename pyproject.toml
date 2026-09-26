@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mydht"
+version = "2.0.0"
+description = "A small distributed hash table with a plain HTTP API"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Johan" }]
+dependencies = []
+
+[project.scripts]
+mydht = "mydht.__main__:main"
+
+[tool.setuptools]
+packages = ["mydht"]
