@@ -24,6 +24,7 @@ import json
 import logging
 import mimetypes
 import threading
+from email.utils import formatdate, parsedate_to_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Iterable, Optional, Union
 from urllib.parse import unquote, urlsplit
@@ -415,7 +416,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.close_connection = True
         self.send_response(status)
         self.send_header("Connection", "close")
-        if body or status != 204:
+        if body or status not in (204, 304):
             if content_type:
                 self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
@@ -483,10 +484,16 @@ class _Handler(BaseHTTPRequestHandler):
             entry = self.node.read(key)
             if entry is None:
                 return self._text(404, f"{key} not found")
+            headers = {
+                peers.TIMESTAMP: str(entry.timestamp),
+                "ETag": f'"{entry.timestamp}"',
+                "Last-Modified": formatdate(entry.timestamp / 1e9, usegmt=True),
+            }
+            if self._not_modified(entry):
+                return self._send(304, headers=headers)
             content_type = (entry.content_type or mimetypes.guess_type(key)[0]
                             or "application/octet-stream")
-            return self._send(200, entry.value, content_type,
-                              {peers.TIMESTAMP: str(entry.timestamp)})
+            return self._send(200, entry.value, content_type, headers)
         if self.command == "PUT":
             content_type = self.headers.get("Content-Type")
             if content_type == "application/x-www-form-urlencoded":
@@ -495,6 +502,25 @@ class _Handler(BaseHTTPRequestHandler):
         if self.command == "DELETE":
             return self._json(200, self.node.write(key, Entry(now())))
         self._text(405, "method not allowed")
+
+    def _not_modified(self, entry: Entry) -> bool:
+        """Conditional GET: does the client already have this version?
+
+        The ETag is the version timestamp, so it changes on every write.
+        ``If-None-Match`` wins over ``If-Modified-Since``, as in RFC 9110.
+        """
+        if_none_match = self.headers.get("If-None-Match")
+        if if_none_match is not None:
+            tags = [t.strip().removeprefix("W/") for t in if_none_match.split(",")]
+            return "*" in tags or f'"{entry.timestamp}"' in tags
+        if_modified_since = self.headers.get("If-Modified-Since")
+        if if_modified_since:
+            try:
+                since = parsedate_to_datetime(if_modified_since).timestamp()
+            except (TypeError, ValueError):
+                return False
+            return entry.timestamp // 10**9 <= since
+        return False
 
     def _whereis(self, key):
         self._json(200, self.node.ring.replicas_for(key))

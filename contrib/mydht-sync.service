@@ -1,0 +1,15 @@
+[Unit]
+Description=Sync a file from MyDHT
+Documentation=https://github.com/snorf/mydht
+Wants=network-online.target
+After=network-online.target mydht.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/default/mydht-sync
+Environment=MYDHT_SYNC_STATE=/var/lib/mydht-sync
+StateDirectory=mydht-sync
+ExecStart=/opt/mydht/bin/mydht-sync
+# Runs as root, since it writes the target file and reloads its service.
+PrivateTmp=yes
+ProtectHome=yes

@@ -113,6 +113,30 @@ class ClusterTest(ClusterTestCase):
         self.assertIn(b"MyDHT node", self.call(a, "GET", "/").body)
         self.assertEqual(self.call(a, "GET", "/ring").json()["nodes"], [a.name])
 
+    def test_conditional_get(self):
+        a, b, _ = self.start(3)
+        self.put(a, "hosts.conf", b"v1")
+        first = self.get(b, "hosts.conf")
+        etag, modified = first.headers["ETag"], first.headers["Last-Modified"]
+
+        same = self.call(b, "GET", "/keys/hosts.conf", headers={"If-None-Match": etag})
+        self.assertEqual((same.status, same.body), (304, b""))
+        self.assertEqual(same.headers["ETag"], etag)
+        self.assertEqual(self.call(a, "GET", "/keys/hosts.conf",
+                                   headers={"If-Modified-Since": modified}).status, 304)
+        self.assertEqual(self.call(a, "GET", "/keys/hosts.conf",
+                                   headers={"If-None-Match": '"123", *'}).status, 304)
+
+        self.put(a, "hosts.conf", b"v2")
+        changed = self.call(b, "GET", "/keys/hosts.conf", headers={"If-None-Match": etag})
+        self.assertEqual((changed.status, changed.body), (200, b"v2"))
+        self.assertNotEqual(changed.headers["ETag"], etag)
+        old = "Mon, 01 Jan 2001 00:00:00 GMT"
+        self.assertEqual(self.call(a, "GET", "/keys/hosts.conf",
+                                   headers={"If-Modified-Since": old}).status, 200)
+        self.assertEqual(self.call(a, "GET", "/keys/hosts.conf",
+                                   headers={"If-Modified-Since": "garbage"}).status, 200)
+
     def test_chunked_upload(self):
         """What `curl -T -` sends when reading from stdin."""
         (a,) = self.start(1)
